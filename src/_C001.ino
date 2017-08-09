@@ -33,11 +33,13 @@ boolean CPlugin_001(byte function, struct EventStruct *event, String& string)
         String authHeader = "";
         if ((SecuritySettings.ControllerUser[0] != 0) && (SecuritySettings.ControllerPassword[0] != 0))
         {
-// todo           base64 encoder;
-//          String auth = SecuritySettings.ControllerUser;
-//          auth += ":";
-//          auth += SecuritySettings.ControllerPassword;
-//          authHeader = "Authorization: Basic " + encoder.encode(auth) + " \r\n";
+          base64 encoder;
+          String auth = SecuritySettings.ControllerUser;
+          auth += ":";
+          auth += SecuritySettings.ControllerPassword;
+          authHeader = F("Authorization: Basic ");
+          authHeader += encoder.encode(auth);
+          authHeader += F(" \r\n");
         }
         
         char log[80];

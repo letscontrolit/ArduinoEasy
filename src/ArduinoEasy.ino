@@ -170,6 +170,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
+#include <base64.h>
 #include <Ethernet.h>
 #include <EthernetUdp.h>
 #if FEATURE_MQTT
