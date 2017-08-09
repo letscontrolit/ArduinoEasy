@@ -17,7 +17,11 @@ void WebServerHandleClient() {
         char c = client.read();
         if (getrequest)
           request += c;
-        //Serial.write(c);
+
+        #ifdef DEBUG_WEB
+          Serial.write(c);
+        #endif
+        
         // if you've gotten to the end of the line (received a newline
         // character) and the line is blank, the http request has ended,
         // so you can send a reply
@@ -28,6 +32,16 @@ void WebServerHandleClient() {
             char c = client.read();
             webdata += c;
           }
+
+          if (webdata.length() !=0)
+            webdata = "&" + webdata;
+            
+          #ifdef DEBUG_WEB
+            Serial.print("webdata0:");
+            Serial.println(webdata);
+            Serial.print("len:");
+            Serial.println(webdata.length());
+          #endif
 
           int pos = request.indexOf("/");
           if (pos > 0)
@@ -44,6 +58,12 @@ void WebServerHandleClient() {
           }
 
           webdata = URLDecode(webdata.c_str());
+
+          #ifdef DEBUG_WEB
+            Serial.print("webdata1:");
+            Serial.println(webdata);
+          #endif
+          
           if (request.startsWith(F(" HTTP")) or request.length() == 0) // root page
           {
             addHeader(true, client);
@@ -127,7 +147,18 @@ void WebServerHandleClient() {
 
 String WebServerarg(String arg)
 {
+  #ifdef DEBUG_WEB2
+    Serial.print("webdata3:");
+    Serial.println(webdata);
+  #endif
+  
   arg = "&" + arg;
+
+  #ifdef DEBUG_WEB2
+    Serial.print("arg:");
+    Serial.println(arg);
+  #endif
+
   String returnarg = "";
   int pos = webdata.indexOf(arg);
   if (pos >= 0)
@@ -489,8 +520,19 @@ void update_config()
 {
   char tmpString[64];
 
+  #ifdef DEBUG_WEB
+    Serial.print("webdata2:");
+    Serial.println(webdata);
+  #endif
+  
   String arg = "";
   arg = WebServerarg(F("name"));
+
+  #ifdef DEBUG_WEB
+  Serial.print("name:");
+  Serial.println(arg);
+  #endif
+  
   if (arg[0] != 0)
   {
     strncpy(Settings.Name, arg.c_str(), sizeof(Settings.Name));
@@ -1405,7 +1447,7 @@ void addTaskValueSelect(String& str, String name,  int choice, byte TaskIndex)
 void handle_rules(EthernetClient client, String &post) {
   //if (!isLoggedIn()) return;
 
-  String rules = post.substring(6);
+  String rules = post.substring(7);
   webdata = "";
 
   if (rules.length() > 0)

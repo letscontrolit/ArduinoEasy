@@ -36,6 +36,9 @@
 //   User specific configuration
 // ********************************************************************************
 
+
+//#define DEBUG_WEB
+
 // Set default configuration settings if you want (not mandatory)
 // You can always change these during runtime and save to eeprom
 // After loading firmware, issue a 'reset' command to load the defaults.
