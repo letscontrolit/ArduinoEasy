@@ -96,7 +96,7 @@ boolean CPlugin_001(byte function, struct EventStruct *event, String& string)
           case SENSOR_TYPE_TEMP_BARO:                      // temp + hum + hum_stat + bar + bar_fore, used for BMP085
             url += F("&svalue=");
             url += toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
-            url += ";0;0;";
+            url += F(";0;0;");
             url += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
             url += ";0";
             break;
@@ -145,9 +145,6 @@ boolean CPlugin_001(byte function, struct EventStruct *event, String& string)
         request += authHeader;
         request += F("Connection: close\r\n\r\n");
         client.print(request);
-//        client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-//                     "Host: " + host + "\r\n" + authHeader + 
-//                     "Connection: close\r\n\r\n");
 
         unsigned long timer = millis() + 200;
         while (!client.available() && millis() < timer)
@@ -158,7 +155,7 @@ boolean CPlugin_001(byte function, struct EventStruct *event, String& string)
           String line = client.readStringUntil('\n');
           line.toCharArray(log, 80);
           addLog(LOG_LEVEL_DEBUG_MORE, log);
-          if (line.substring(0, 15) == "HTTP/1.1 200 OK")
+          if (line.substring(0, 15) == F("HTTP/1.1 200 OK"))
           {
             strcpy_P(log, PSTR("HTTP : Success"));
             addLog(LOG_LEVEL_DEBUG, log);

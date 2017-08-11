@@ -20,14 +20,6 @@ void ExecuteCommand(byte source, const char *Line)
   // commands for debugging
   // ****************************************
 
-  if (strcasecmp_P(Command, PSTR("Syslog")) == 0)
-  {
-    success = true;
-    String event = Line;
-    event = event.substring(6);
-    syslog(event.c_str());
-  }
-
   if (strcasecmp_P(Command, PSTR("w5100")) == 0)
   {
     success = true;
@@ -175,10 +167,16 @@ void ExecuteCommand(byte source, const char *Line)
     EthernetClient client;
     if (client.connect(host.c_str(), port.toInt()))
     {
-      client.print(String("GET ") + path + " HTTP/1.1\r\n" +
-                 "Host: " + host + "\r\n" +
-                 "Connection: close\r\n\r\n");
-
+      String request = F("GET ");
+      request += path;
+      request += F(" HTTP/1.1\r\n");
+      request += F("Host: ");
+      request += host;
+      request += F("\r\n");
+//      request += authHeader;
+      request += F("Connection: close\r\n\r\n");
+      client.print(request);
+      
       unsigned long timer = millis() + 200;
       while (!client.available() && millis() < timer)
         delay(1);

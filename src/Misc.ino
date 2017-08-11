@@ -1555,7 +1555,7 @@ unsigned long getNtpTime()
     portUDP.endPacket();
 
     uint32_t beginWait = millis();
-    while (millis() - beginWait < 1000) {
+    while (millis() - beginWait < 2000) {
       int size = portUDP.parsePacket();
       if (size >= NTP_PACKET_SIZE) {
         portUDP.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer

@@ -810,8 +810,11 @@ void handle_devices(EthernetClient client, String &post) {
             //reply += Settings.Pin_i2c_scl; // todo
           }
           if (Device[DeviceIndex].Type == DEVICE_TYPE_ANALOG)
-            reply += F("ADC (TOUT)");
-
+          {
+            reply += F("A");
+            reply += Settings.TaskDevicePort[x];
+          }
+          
           if (Settings.TaskDevicePin1[x] != -1)
           {
             reply += F("GPIO-");
@@ -1864,6 +1867,11 @@ bool handle_unknown(EthernetClient client, String path) {
 boolean handle_custom(EthernetClient client, String path) {
   //path = path.substring(1);
   String reply = "";
+  client.println(F("HTTP/1.1 200 OK"));
+  client.println(F("Content-Type: text/html"));
+  client.println(F("Connection: close"));  // the connection will be closed after completion of the response
+  client.println();
+  
   if (path.startsWith(F("dashboard"))) // for the dashboard page, create a default unit dropdown selector 
   {
     reply += F("<script><!--\n"

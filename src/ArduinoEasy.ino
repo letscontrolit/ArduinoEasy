@@ -702,8 +702,8 @@ void SensorSendTask(byte TaskIndex)
           float value = UserVar[varIndex + varNr];
           float result = 0;
           String svalue = String(value);
-          formula.replace("%pvalue%", spreValue);
-          formula.replace("%value%", svalue);
+          formula.replace(F("%pvalue%"), spreValue);
+          formula.replace(F("%value%"), svalue);
           byte error = Calculate(formula.c_str(), &result);
           if (error == 0)
             UserVar[varIndex + varNr] = result;
