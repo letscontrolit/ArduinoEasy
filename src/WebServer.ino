@@ -202,7 +202,7 @@ void addHeader(boolean showMenu, EthernetClient client)
     str += F("h1 {font-size:16pt; color:black;}");
     str += F("h6 {font-size:10pt; color:black; text-align:center;}");
     str += F(".button-menu {background-color:#ffffff; color:blue; margin: 10px; text-decoration:none}");
-    str += F(".button-link {padding:5px 15px; background-color:#0077dd; color:#fff; border:solid 1px #fff; text-decoration:none}");
+    str += F(".button-link {margin:4px; padding:4px 16px; background-color:#07D; color:#FFF; text-decoration:none; border-radius:4px}");
     str += F(".button-menu:hover {background:#ddddff;}");
     str += F(".button-link:hover {background:#369;}");
     str += F("th {padding:10px; background-color:black; color:#ffffff;}");
@@ -329,7 +329,8 @@ void handle_root(EthernetClient client, String &post) {
       if (Nodes[x].ip[0] != 0)
       {
         char url[80];
-        sprintf_P(url, PSTR("<a href='http://%u.%u.%u.%u'>%u.%u.%u.%u</a>"), Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3], Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3]);
+//        sprintf_P(url, PSTR("<a href='http://%u.%u.%u.%u'>%u.%u.%u.%u</a>"), Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3], Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3]);
+        sprintf_P(url, PSTR("<a class='button-link' href='http://%u.%u.%u.%u'>%u.%u.%u.%u</a>"), Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3], Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3]);
         reply += F("<TR><TD>Unit ");
         reply += x;
         reply += F("<TD>");
@@ -1832,7 +1833,8 @@ bool handle_unknown(EthernetClient client, String path) {
   else if (path.endsWith(F(".ico"))) dataType = F("image/x-icon");
   else if (path.endsWith(F(".txt"))) dataType = F("application/octet-stream");
   else if (path.endsWith(F(".dat"))) dataType = F("application/octet-stream");
-
+  else if (path.endsWith(".esp")) return handle_custom(client, path);
+  
   File dataFile = SD.open(path.c_str());
   if (!dataFile)
     return false;
@@ -1853,6 +1855,132 @@ bool handle_unknown(EthernetClient client, String path) {
     client.write(dataFile.read());
   }
   dataFile.close();
+  return true;
+}
+
+//********************************************************************************
+// Web Interface custom page handler
+//********************************************************************************
+boolean handle_custom(EthernetClient client, String path) {
+  //path = path.substring(1);
+  String reply = "";
+  if (path.startsWith(F("dashboard"))) // for the dashboard page, create a default unit dropdown selector 
+  {
+    reply += F("<script><!--\n"
+             "function dept_onchange(frmselect) {frmselect.submit();}"
+             "\n//--></script>");
+
+    reply += F("<form name='frmselect' method='post'>");
+
+    // handle page redirects to other unit's as requested by the unit dropdown selector
+    byte unit = WebServerarg(F("unit")).toInt();
+    byte btnunit = WebServerarg(F("btnunit")).toInt();
+    if(!unit) unit = btnunit; // unit element prevails, if not used then set to btnunit
+    if (unit && unit != Settings.Unit)
+    {
+      char url[20];
+      sprintf_P(url, PSTR("http://%u.%u.%u.%u/dashboard.esp"), Nodes[unit].ip[0], Nodes[unit].ip[1], Nodes[unit].ip[2], Nodes[unit].ip[3]);
+      reply = F("<meta http-equiv=\"refresh\" content=\"0; URL=");
+      reply += url; 
+      reply += F("\">");
+      client.print(reply);
+      return true;
+    }
+
+    // create unit selector dropdown
+    addSelector_Head(reply, F("unit"), true);
+    byte choice = Settings.Unit;
+    for (byte x = 0; x < UNIT_MAX; x++)
+    {
+      if (Nodes[x].ip[0] != 0 || x == Settings.Unit)
+      {
+      String name = String(x);
+      addSelector_Item(reply, name, x, choice == x, false, F(""));
+      }
+    } 
+    addSelector_Foot(reply);
+
+    // create <> navigation buttons
+    byte prev=Settings.Unit;
+    byte next=Settings.Unit;
+    for (byte x = Settings.Unit-1; x > 0; x--)
+      if (Nodes[x].ip[0] != 0) {prev = x; break;}
+    for (byte x = Settings.Unit+1; x < UNIT_MAX; x++)
+      if (Nodes[x].ip[0] != 0) {next = x; break;}
+      
+    reply += F("<a class='button link' href=");
+    reply += path;
+    reply += F("?btnunit=");
+    reply += prev;
+    reply += F(">&lt;</a>");
+    reply += F("<a class='button link' href=");
+    reply += path;
+    reply += F("?btnunit=");
+    reply += next;
+    reply += F(">&gt;</a>");
+  }
+
+  // handle commands from a custom page
+  String webrequest = WebServerarg(F("cmd"));
+  if (webrequest.length() > 0){
+    struct EventStruct TempEvent;
+    parseCommandString(&TempEvent, webrequest);
+    TempEvent.Source = VALUE_SOURCE_HTTP;
+
+    if (PluginCall(PLUGIN_WRITE, &TempEvent, webrequest));
+    //else if (remoteConfig(&TempEvent, webrequest));
+    else if (webrequest.startsWith(F("event")))
+      ExecuteCommand(VALUE_SOURCE_HTTP, webrequest.c_str());
+
+    // handle some update processes first, before returning page update...
+    PluginCall(PLUGIN_TEN_PER_SECOND, 0, dummyString);
+  }
+
+  // create a dynamic custom page, parsing task values into [<taskname>#<taskvalue>] placeholders and parsing %xx% system variables
+  File dataFile = SD.open(path.c_str(), FILE_READ);
+  if (dataFile)
+  {
+    String page = "";
+    while (dataFile.available())
+      page += ((char)dataFile.read());
+
+    reply += parseTemplate(page,0);
+    dataFile.close();
+  }
+  else // if the requestef file does not exist, create a default action in case the page is named "dashboard*"
+  {
+    if (path.startsWith(F("dashboard")))
+    {
+      // if the custom page does not exist, create a basic task value overview page in case of dashboard request...
+      reply += F("<meta name=\"viewport\" content=\"width=width=device-width, initial-scale=1\"><STYLE>* {font-family:sans-serif; font-size:16pt;}.button {margin:4px; padding:4px 16px; background-color:#07D; color:#FFF; text-decoration:none; border-radius:4px}</STYLE>");
+      reply += F("<table>");
+      for (byte x = 0; x < TASKS_MAX; x++)
+      {
+        if (Settings.TaskDeviceNumber[x] != 0)
+          {
+            LoadTaskSettings(x);
+            byte DeviceIndex = getDeviceIndex(Settings.TaskDeviceNumber[x]);
+            reply += F("<TR><TD>");
+            reply += ExtraTaskSettings.TaskDeviceName;
+            for (byte varNr = 0; varNr < VARS_PER_TASK; varNr++)
+              {
+                if ((Settings.TaskDeviceNumber[x] != 0) && (varNr < Device[DeviceIndex].ValueCount) && ExtraTaskSettings.TaskDeviceValueNames[varNr][0] !=0)
+                {
+                  if (varNr > 0)
+                    reply += F("<TR><TD>");
+                  reply += F("<TD>");
+                  reply += ExtraTaskSettings.TaskDeviceValueNames[varNr];
+                  reply += F("<TD>");
+                  reply += String(UserVar[x * VARS_PER_TASK + varNr], ExtraTaskSettings.TaskDeviceValueDecimals[varNr]);
+                }
+              }
+          }
+      }
+    }
+    else
+      return false; // unknown file that does not exist...
+  }
+  client.print(reply);
   return true;
 }
 
@@ -2123,5 +2251,72 @@ String URLDecode(const char *src)
     }
   }
   return rString;
+}
+
+void addSelector(String& str, const String& id, int optionCount, const String options[], const int indices[], const String attr[], int selectedIndex, boolean reloadonchange)
+{
+  int index;
+
+  str += F("<select name='");
+  str += id;
+  str += F("'");
+  if (reloadonchange)
+    str += F(" onchange=\"return dept_onchange(frmselect)\"");
+  str += F(">");
+  for (byte x = 0; x < optionCount; x++)
+  {
+    if (indices)
+      index = indices[x];
+    else
+      index = x;
+    str += F("<option value=");
+    str += index;
+    if (selectedIndex == index)
+      str += F(" selected");
+    if (attr)
+    {
+      str += F(" ");
+      str += attr[x];
+    }
+    str += ">";
+    str += options[x];
+    str += F("</option>");
+  }
+  str += F("</select>");
+}
+
+
+void addSelector_Head(String& str, const String& id, boolean reloadonchange)
+{
+  str += F("<select name='");
+  str += id;
+  str += F("'");
+  if (reloadonchange)
+    str += F(" onchange=\"return dept_onchange(frmselect)\"");
+  str += F(">");
+}
+
+void addSelector_Item(String& str, const String& option, int index, boolean selected, boolean disabled, const String& attr)
+{
+  str += F("<option value=");
+  str += index;
+  if (selected)
+    str += F(" selected");
+  if (disabled)
+    str += F(" disabled");
+  if (attr && attr.length() > 0)
+  {
+    str += F(" ");
+    str += attr;
+  }
+  str += ">";
+  str += option;
+  str += F("</option>");
+}
+
+
+void addSelector_Foot(String& str)
+{
+  str += F("</select>");
 }
 

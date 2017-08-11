@@ -114,16 +114,16 @@ boolean CPlugin_001(byte function, struct EventStruct *event, String& string)
             url += event->idx;
             url += F("&switchcmd=");
             if (UserVar[event->BaseVarIndex] == 0)
-              url += "Off";
+              url += F("Off");
             else
-              url += "On";
+              url += F("On");
             break;
           case SENSOR_TYPE_DIMMER:
             url = F("/json.htm?type=command&param=switchlight&idx=");
             url += event->idx;
             url += F("&switchcmd=");
             if (UserVar[event->BaseVarIndex] == 0)
-              url += "Off";
+              url += F("Off");
             else
             {
               url += F("Set%20Level&level=");
@@ -136,9 +136,18 @@ boolean CPlugin_001(byte function, struct EventStruct *event, String& string)
         addLog(LOG_LEVEL_DEBUG_MORE, log);
 
         // This will send the request to the server
-        client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-                     "Host: " + host + "\r\n" + authHeader + 
-                     "Connection: close\r\n\r\n");
+        String request = F("GET ");
+        request += url;
+        request += F(" HTTP/1.1\r\n");
+        request += F("Host: ");
+        request += host;
+        request += F("\r\n");
+        request += authHeader;
+        request += F("Connection: close\r\n\r\n");
+        client.print(request);
+//        client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+//                     "Host: " + host + "\r\n" + authHeader + 
+//                     "Connection: close\r\n\r\n");
 
         unsigned long timer = millis() + 200;
         while (!client.available() && millis() < timer)

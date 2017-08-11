@@ -55,7 +55,7 @@ boolean CPlugin_005(byte function, struct EventStruct *event, String& string)
         String cmd = "";
         struct EventStruct TempEvent;
 
-        if (topicSplit[count] == "cmd")
+        if (topicSplit[count] == F("cmd"))
         {
           cmd = event->String2;
           parseCommandString(&TempEvent, cmd);
@@ -85,9 +85,9 @@ boolean CPlugin_005(byte function, struct EventStruct *event, String& string)
           PluginCall(PLUGIN_GET_DEVICEVALUENAMES, event, dummyString);
 
         String pubname = Settings.MQTTpublish;
-        pubname.replace("%sysname%", Settings.Name);
-        pubname.replace("%tskname%", ExtraTaskSettings.TaskDeviceName);
-        pubname.replace("%id%", String(event->idx));
+        pubname.replace(F("%sysname%"), Settings.Name);
+        pubname.replace(F("%tskname%"), ExtraTaskSettings.TaskDeviceName);
+        pubname.replace(F("%id%"), String(event->idx));
 
         String value = "";
         byte DeviceIndex = getDeviceIndex(Settings.TaskDeviceNumber[event->TaskIndex]);
@@ -95,7 +95,7 @@ boolean CPlugin_005(byte function, struct EventStruct *event, String& string)
         for (byte x = 0; x < valueCount; x++)
         {
           String tmppubname = pubname;
-          tmppubname.replace("%valname%", ExtraTaskSettings.TaskDeviceValueNames[x]);
+          tmppubname.replace(F("%valname%"), ExtraTaskSettings.TaskDeviceValueNames[x]);
           if (event->sensorType == SENSOR_TYPE_LONG)
             value = (unsigned long)UserVar[event->BaseVarIndex] + ((unsigned long)UserVar[event->BaseVarIndex + 1] << 16);
           else

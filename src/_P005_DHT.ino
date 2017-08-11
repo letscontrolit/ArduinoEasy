@@ -117,7 +117,8 @@ boolean Plugin_005(byte function, struct EventStruct *event, String& string)
                 dht_dat[i] = data;
               else
               {
-                addLog(LOG_LEVEL_ERROR, (char*)"DHT  : protocol timeout!");
+                String log = F("DHT  : protocol timeout!");
+                addLog(LOG_LEVEL_ERROR, log);
                 error = true;
               }
             }
@@ -172,7 +173,7 @@ boolean Plugin_005(byte function, struct EventStruct *event, String& string)
         if(!success)
         {
           String log = F("DHT  : No reading!");
-          addLog(LOG_LEVEL_INFO, log);
+          addLog(LOG_LEVEL_ERROR, log);
           UserVar[event->BaseVarIndex] = NAN;
           UserVar[event->BaseVarIndex + 1] = NAN;
         }

@@ -20,6 +20,14 @@ void ExecuteCommand(byte source, const char *Line)
   // commands for debugging
   // ****************************************
 
+  if (strcasecmp_P(Command, PSTR("Syslog")) == 0)
+  {
+    success = true;
+    String event = Line;
+    event = event.substring(6);
+    syslog(event.c_str());
+  }
+
   if (strcasecmp_P(Command, PSTR("w5100")) == 0)
   {
     success = true;
@@ -177,7 +185,7 @@ void ExecuteCommand(byte source, const char *Line)
 
       while (client.available()) {
         String line = client.readStringUntil('\n');
-        if (line.substring(0, 15) == "HTTP/1.1 200 OK")
+        if (line.substring(0, 15) == F("HTTP/1.1 200 OK"))
           addLog(LOG_LEVEL_DEBUG, line);
         delay(1);
       }

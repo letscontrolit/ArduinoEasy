@@ -428,14 +428,6 @@ void setup()
     if (Settings.Build != BUILD)
       BuildFixes();
 
-    String log = F("\nINIT : Booting Build nr:");
-    log += BUILD;
-    addLog(LOG_LEVEL_INFO, log);
-
-    hardwareInit();
-    PluginInit();
-    CPluginInit();
-
     mac[5] = Settings.Unit; // make sure every unit has a unique mac address
     if (Settings.IP[0] == 0)
       Ethernet.begin(mac);
@@ -445,6 +437,10 @@ void setup()
     // setup UDP
     if (Settings.UDPPort != 0)
       portUDP.begin(Settings.UDPPort);
+      
+    hardwareInit();
+    PluginInit();
+    CPluginInit();
 
 #if FEATURE_MQTT
     // Setup MQTT Client
@@ -453,10 +449,11 @@ void setup()
       MQTTConnect();
 #endif
 
-    sendSysInfoUDP(3);
-
-    log = F("INIT : Boot OK");
+    String log = F("\nINIT : Booting Build nr:");
+    log += BUILD;
     addLog(LOG_LEVEL_INFO, log);
+
+    sendSysInfoUDP(3);
 
     // Setup timers
     byte bootMode = 0;
@@ -488,6 +485,8 @@ void setup()
       rulesProcessing(event);
     }
 
+    log = F("INIT : Boot OK");
+    addLog(LOG_LEVEL_INFO, log);
   }
   else
   {

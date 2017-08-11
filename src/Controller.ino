@@ -93,13 +93,13 @@ void MQTTConnect()
   MQTTclient.setCallback(callback);
 
   // MQTT needs a unique clientname to subscribe to broker
-  String clientid = "ESPClient";
+  String clientid = F("ESPClient");
   clientid += Settings.Unit;
   String subscribeTo = "";
 
   String LWTTopic = Settings.MQTTsubscribe;
   LWTTopic.replace("/#", "/status");
-  LWTTopic.replace("%sysname%", Settings.Name);
+  LWTTopic.replace(F("%sysname%"), Settings.Name);
   
   for (byte x = 1; x < 3; x++)
   {
@@ -116,7 +116,7 @@ void MQTTConnect()
       log = F("MQTT : Connected to broker");
       addLog(LOG_LEVEL_INFO, log);
       subscribeTo = Settings.MQTTsubscribe;
-      subscribeTo.replace("%sysname%", Settings.Name);
+      subscribeTo.replace(F("%sysname%"), Settings.Name);
       MQTTclient.subscribe(subscribeTo.c_str());
       log = F("Subscribed to: ");
       log += subscribeTo;
@@ -162,7 +162,7 @@ void MQTTStatus(String& status)
 {
   String pubname = Settings.MQTTsubscribe;
   pubname.replace("/#", "/status");
-  pubname.replace("%sysname%", Settings.Name);
+  pubname.replace(F("%sysname%"), Settings.Name);
   MQTTclient.publish(pubname.c_str(), status.c_str(),Settings.MQTTRetainFlag);
 }
 #endif
