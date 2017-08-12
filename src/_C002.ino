@@ -70,7 +70,7 @@ boolean CPlugin_002(byte function, struct EventStruct *event, String& string)
               {
                 String action = F("inputSwitchState,");
                 action += x;
-                action += ",";
+                action += F(",");
                 action += nvalue;
                 struct EventStruct TempEvent;
                 parseCommandString(&TempEvent, action);
@@ -86,7 +86,7 @@ boolean CPlugin_002(byte function, struct EventStruct *event, String& string)
                   int pwmValue = UserVar[baseVar];
                   action = F("pwm,");
                   action += Settings.TaskDevicePin1[x];
-                  action += ",";
+                  action += F(",");
                   switch ((int)nvalue)
                   {
                     case 0:
@@ -107,7 +107,7 @@ boolean CPlugin_002(byte function, struct EventStruct *event, String& string)
                   UserVar[baseVar] = nvalue;
                   action = F("gpio,");
                   action += Settings.TaskDevicePin1[x];
-                  action += ",";
+                  action += F(",");
                   action += nvalue;
                 }
                 parseCommandString(&TempEvent, action);
@@ -155,27 +155,27 @@ boolean CPlugin_002(byte function, struct EventStruct *event, String& string)
           case SENSOR_TYPE_TEMP_HUM:                      // temp + hum + hum_stat, used for DHT11
             root[F("nvalue")] = 0;
             values  = toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
-            values += ";";
+            values += F(";");
             values += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
-            values += ";0";
+            values += F(";0");
             values.toCharArray(str, 80);
             root[F("svalue")] =  str;
             break;
           case SENSOR_TYPE_TEMP_BARO:                      // temp + hum + hum_stat + bar + bar_fore, used for BMP085
             root[F("nvalue")] = 0;
             values  = toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
-            values += ";0;0;";
+            values += F(";0;0;");
             values += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
-            values += ";0";
+            values += F(";0");
             values.toCharArray(str, 80);
             root[F("svalue")] =  str;
             break;
           case SENSOR_TYPE_TEMP_HUM_BARO:                      // temp + hum + hum_stat + bar + bar_fore, used for BME280
             root[F("nvalue")] = 0;
             values  = toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
-            values += ";";
+            values += F(";");
             values += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
-            values += ";0;";
+            values += F(";0;");
             values += toString(UserVar[event->BaseVarIndex + 2],ExtraTaskSettings.TaskDeviceValueDecimals[2]);
             values += ";0";
             values.toCharArray(str, 80);
@@ -184,9 +184,9 @@ boolean CPlugin_002(byte function, struct EventStruct *event, String& string)
           case SENSOR_TYPE_SWITCH:
             root[F("command")] = String(F("switchlight"));
             if (UserVar[event->BaseVarIndex] == 0)
-              root[F("switchcmd")] = "Off";
+              root[F("switchcmd")] = F("Off");
             else
-              root[F("switchcmd")] = "On";
+              root[F("switchcmd")] = F("On");
             break;
           case SENSOR_TYPE_DIMMER:
             root[F("command")] =  String(F("switchlight"));

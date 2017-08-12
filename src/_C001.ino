@@ -35,7 +35,7 @@ boolean CPlugin_001(byte function, struct EventStruct *event, String& string)
         {
           base64 encoder;
           String auth = SecuritySettings.ControllerUser;
-          auth += ":";
+          auth += F(":");
           auth += SecuritySettings.ControllerPassword;
           authHeader = F("Authorization: Basic ");
           authHeader += encoder.encode(auth);
@@ -83,29 +83,29 @@ boolean CPlugin_001(byte function, struct EventStruct *event, String& string)
           case SENSOR_TYPE_DUAL:                       // any sensor that uses two simple values
             url += F("&svalue=");
             url += toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
-            url += ";";
+            url += F(";");
             url += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
             break;            
           case SENSOR_TYPE_TEMP_HUM:                      // temp + hum + hum_stat, used for DHT11
             url += F("&svalue=");
             url += toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
-            url += ";";
+            url += F(";");
             url += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
-            url += ";0";
+            url += F(";0");
             break;
           case SENSOR_TYPE_TEMP_BARO:                      // temp + hum + hum_stat + bar + bar_fore, used for BMP085
             url += F("&svalue=");
             url += toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
             url += F(";0;0;");
             url += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
-            url += ";0";
+            url += F(";0");
             break;
           case SENSOR_TYPE_TEMP_HUM_BARO:                      // temp + hum + hum_stat + bar + bar_fore, used for BME280
             url += F("&svalue=");
             url += toString(UserVar[event->BaseVarIndex],ExtraTaskSettings.TaskDeviceValueDecimals[0]);
-            url += ";";
+            url += F(";");
             url += toString(UserVar[event->BaseVarIndex + 1],ExtraTaskSettings.TaskDeviceValueDecimals[1]);
-            url += ";0;";
+            url += F(";0;");
             url += toString(UserVar[event->BaseVarIndex + 2],ExtraTaskSettings.TaskDeviceValueDecimals[2]);
             url += ";0";
             break;

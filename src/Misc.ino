@@ -572,8 +572,8 @@ boolean str2ip(char *string, byte* IP)
   \*********************************************************************************************/
 void SaveSettings(void)
 {
-  SaveToFile((char*)"config.txt", 0, (byte*)&Settings, sizeof(struct SettingsStruct));
-  SaveToFile((char*)"security.txt", 0, (byte*)&SecuritySettings, sizeof(struct SecurityStruct));
+  SaveToFile(F("config.txt"), 0, (byte*)&Settings, sizeof(struct SettingsStruct));
+  SaveToFile(F("security.txt"), 0, (byte*)&SecuritySettings, sizeof(struct SecurityStruct));
 }
 
 
@@ -582,8 +582,8 @@ void SaveSettings(void)
   \*********************************************************************************************/
 boolean LoadSettings()
 {
-  LoadFromFile((char*)"config.txt", 0, (byte*)&Settings, sizeof(struct SettingsStruct));
-  LoadFromFile((char*)"security.txt", 0, (byte*)&SecuritySettings, sizeof(struct SecurityStruct));
+  LoadFromFile(F("config.txt"), 0, (byte*)&Settings, sizeof(struct SettingsStruct));
+  LoadFromFile(F("security.txt"), 0, (byte*)&SecuritySettings, sizeof(struct SecurityStruct));
 }
 
 
@@ -593,7 +593,7 @@ boolean LoadSettings()
 void SaveTaskSettings(byte TaskIndex)
 {
   ExtraTaskSettings.TaskIndex = TaskIndex;
-  SaveToFile((char*)"config.txt", 4096 + (TaskIndex * 1024), (byte*)&ExtraTaskSettings, sizeof(struct ExtraTaskSettingsStruct));
+  SaveToFile(F("config.txt"), 4096 + (TaskIndex * 1024), (byte*)&ExtraTaskSettings, sizeof(struct ExtraTaskSettingsStruct));
 }
 
 
@@ -605,7 +605,7 @@ void LoadTaskSettings(byte TaskIndex)
   if (ExtraTaskSettings.TaskIndex == TaskIndex)
     return;
 
-  LoadFromFile((char*)"config.txt", 4096 + (TaskIndex * 1024), (byte*)&ExtraTaskSettings, sizeof(struct ExtraTaskSettingsStruct));
+  LoadFromFile(F("config.txt"), 4096 + (TaskIndex * 1024), (byte*)&ExtraTaskSettings, sizeof(struct ExtraTaskSettingsStruct));
   ExtraTaskSettings.TaskIndex = TaskIndex; // Needed when an empty task was requested
 }
 
@@ -617,7 +617,7 @@ void SaveCustomTaskSettings(int TaskIndex, byte* memAddress, int datasize)
 {
   if (datasize > 512)
     return;
-  SaveToFile((char*)"config.txt", 4096 + (TaskIndex * 1024) + 512, memAddress, datasize);
+  SaveToFile(F("config.txt"), 4096 + (TaskIndex * 1024) + 512, memAddress, datasize);
 }
 
 
@@ -628,7 +628,7 @@ void LoadCustomTaskSettings(int TaskIndex, byte* memAddress, int datasize)
 {
   if (datasize > 512)
     return;
-  LoadFromFile((char*)"config.txt", 4096 + (TaskIndex * 1024) + 512, memAddress, datasize);
+  LoadFromFile(F("config.txt"), 4096 + (TaskIndex * 1024) + 512, memAddress, datasize);
 }
 
 
@@ -639,7 +639,7 @@ void SaveCustomControllerSettings(byte* memAddress, int datasize)
 {
   if (datasize > 4096)
     return;
-  SaveToFile((char*)"config.txt", 28672, memAddress, datasize);
+  SaveToFile(F("config.txt"), 28672, memAddress, datasize);
 }
 
 
@@ -650,14 +650,14 @@ void LoadCustomControllerSettings(byte* memAddress, int datasize)
 {
   if (datasize > 4096)
     return;
-  LoadFromFile((char*)"config.txt", 28672, memAddress, datasize);
+  LoadFromFile(F("config.txt"), 28672, memAddress, datasize);
 }
 
 
 /********************************************************************************************\
   Save data into config file on SPIFFS
   \*********************************************************************************************/
-void SaveToFile(char* fname, int index, byte* memAddress, int datasize)
+void SaveToFile(const __FlashStringHelper* fname, int index, byte* memAddress, int datasize)
 {
   File f = SD.open(fname, FILE_WRITE);
   if (f)
@@ -679,7 +679,7 @@ void SaveToFile(char* fname, int index, byte* memAddress, int datasize)
 /********************************************************************************************\
   Load data from config file on SPIFFS
   \*********************************************************************************************/
-void LoadFromFile(char* fname, int index, byte* memAddress, int datasize)
+void LoadFromFile( const __FlashStringHelper* fname, int index, byte* memAddress, int datasize)
 {
   File f = SD.open(fname);
   if (f)
@@ -702,10 +702,10 @@ void LoadFromFile(char* fname, int index, byte* memAddress, int datasize)
 void ResetFactory(void)
 {
   // Direct Serial is allowed here, since this is only an emergency task.
-  SD.remove("config.txt");
-  SD.remove("security.txt");
-  SD.remove("rules.txt");
-  File f = SD.open("config.txt", FILE_WRITE);
+  SD.remove(F("config.txt"));
+  SD.remove(F("security.txt"));
+  SD.remove(F("rules.txt"));
+  File f = SD.open(F("config.txt"), FILE_WRITE);
   if (f)
   {
     for (unsigned long x = 0; x < 32768; x++)
@@ -713,14 +713,14 @@ void ResetFactory(void)
     f.close();
 
   }
-  f = SD.open("security.txt", FILE_WRITE);
+  f = SD.open(F("security.txt"), FILE_WRITE);
   if (f)
   {
     for (int x = 0; x < 512; x++)
       f.write((byte)0);
     f.close();
   }
-  f = SD.open("rules.txt", FILE_WRITE);
+  f = SD.open(F("rules.txt"), FILE_WRITE);
   f.close();
 
   LoadSettings();
@@ -842,7 +842,7 @@ void addLog(byte loglevel, const char *line)
 
   if (loglevel <= Settings.SDLogLevel)
   {
-    File logFile = SD.open("log.txt", FILE_WRITE);
+    File logFile = SD.open(F("log.txt"), FILE_WRITE);
     if (logFile)
       {
         String time = "";
@@ -855,7 +855,7 @@ void addLog(byte loglevel, const char *line)
         if (second() < 10)
           time += "0";
         time += second();
-        time += " : ";
+        time += F(" : ");
         logFile.print(time);
         logFile.println(line);
       }
@@ -1060,7 +1060,7 @@ String parseTemplate(String &tmpString, byte lineSize)
   }
 
   // replace other system variables like %sysname%, %systime%, %ip%
-  newString.replace("%sysname%", Settings.Name);
+  newString.replace(F("%sysname%"), Settings.Name);
 
   String strTime = "";
   if (hour() < 10)
@@ -1070,16 +1070,16 @@ String parseTemplate(String &tmpString, byte lineSize)
   if (minute() < 10)
     strTime += "0";
   strTime += minute();
-  newString.replace("%systime%", strTime);
+  newString.replace(F("%systime%"), strTime);
 
-  newString.replace("%uptime%", String(wdcounter / 2));
+  newString.replace(F("%uptime%"), String(wdcounter / 2));
 
   IPAddress ip = Ethernet.localIP();
   char strIP[20];
   sprintf_P(strIP, PSTR("%u.%u.%u.%u"), ip[0], ip[1], ip[2], ip[3]);
-  newString.replace("%ip%", strIP);
+  newString.replace(F("%ip%"), strIP);
 
-  newString.replace("%sysload%", String(100 - (100 * loopCounterLast / loopCounterMax)));
+  newString.replace(F("%sysload%"), String(100 - (100 * loopCounterLast / loopCounterMax)));
 
   // padding spaces
   while (newString.length() < lineSize)
@@ -1610,7 +1610,7 @@ void rulesProcessing(String& event)
   if (data == NULL)
   {
     data = new uint8_t[RULES_MAX_SIZE];
-    File f = SD.open("rules.txt");
+    File f = SD.open(F("rules.txt"));
     if (f)
     {
       byte *pointerToByteToRead = data;
@@ -1664,7 +1664,7 @@ void rulesProcessing(String& event)
           if (line.startsWith("on "))
           {
             line = line.substring(3);
-            int split = line.indexOf(" do");
+            int split = line.indexOf(F(" do"));
             if (split != -1)
             {
               eventTrigger = line.substring(0, split);
@@ -1699,7 +1699,7 @@ void rulesProcessing(String& event)
 
         if (match) // rule matched for one action or a block of actions
         {
-          int split = lcAction.indexOf("if "); // check for optional "if" condition
+          int split = lcAction.indexOf(F("if ")); // check for optional "if" condition
           if (split != -1)
           {
             conditional = true;
@@ -1709,13 +1709,13 @@ void rulesProcessing(String& event)
             isCommand = false;
           }
 
-          if (lcAction == "else") // in case of an "else" block of actions, set ifBranche to false
+          if (lcAction == F("else")) // in case of an "else" block of actions, set ifBranche to false
           {
             ifBranche = false;
             isCommand = false;
           }
 
-          if (lcAction == "endif") // conditional block ends here
+          if (lcAction == F("endif")) // conditional block ends here
           {
             conditional = false;
             isCommand = false;
@@ -1728,7 +1728,7 @@ void rulesProcessing(String& event)
             if (equalsPos > 0)
             {
               String tmpString = event.substring(equalsPos + 1);
-              action.replace("%eventvalue%", tmpString); // substitute %eventvalue% in actions with the actual value from the event
+              action.replace(F("%eventvalue%"), tmpString); // substitute %eventvalue% in actions with the actual value from the event
             }
             log = F("ACT  : ");
             log += action;
@@ -1736,10 +1736,10 @@ void rulesProcessing(String& event)
 
             struct EventStruct TempEvent;
             parseCommandString(&TempEvent, action);
-            yield();
+            //yield();
             if (!PluginCall(PLUGIN_WRITE, &TempEvent, action))
               ExecuteCommand(VALUE_SOURCE_SYSTEM, action.c_str());
-            yield();
+            //yield();
           }
         }
       }
@@ -1776,7 +1776,7 @@ boolean ruleMatch(String& event, String& rule)
       return false;
   }
 
-  if (event.startsWith("Clock#Time")) // clock events need different handling...
+  if (event.startsWith(F("Clock#Time"))) // clock events need different handling...
   {
     int pos1 = event.indexOf("=");
     int pos2 = rule.indexOf("=");

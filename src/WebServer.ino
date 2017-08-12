@@ -283,9 +283,9 @@ void handle_root(EthernetClient client, String &post) {
     {
       reply += F("<TR><TD>System Time:<TD>");
       reply += hour();
-      reply += ":";
+      reply += F(":");
       if (minute() < 10)
-        reply += "0";
+        reply += F("0");
       reply += minute();
     }
 
@@ -400,10 +400,10 @@ void handle_config(EthernetClient client, String &post) {
   {
     reply += F("<option value='");
     reply += Protocol[x].Number;
-    reply += "'";
+    reply += F("'");
     if (choice == Protocol[x].Number)
       reply += F(" selected");
-    reply += ">";
+    reply += F(">");
 
     String ProtocolName = "";
     CPlugin_ptr[x](CPLUGIN_GET_DEVICENAME, 0, ProtocolName);
@@ -432,10 +432,10 @@ void handle_config(EthernetClient client, String &post) {
     {
       reply += F("<option value='");
       reply += optionValues[x];
-      reply += "'";
+      reply += F("'");
       if (choice == optionValues[x])
         reply += F(" selected");
-      reply += ">";
+      reply += F(">");
       reply += options[x];
       reply += F("</option>");
     }
@@ -689,15 +689,15 @@ void addPinStateSelect(String& str, String name,  int choice)
 
   str += F("<select name='");
   str += name;
-  str += "'>";
+  str += F("'>");
   for (byte x = 0; x < 4; x++)
   {
     str += F("<option value='");
     str += optionValues[x];
-    str += "'";
+    str += F("'");
     if (choice == optionValues[x])
       str += F(" selected");
-    str += ">";
+    str += F(">");
     str += options[x];
     str += F("</option>");
   }
@@ -1228,10 +1228,10 @@ void addDeviceSelect(String& str, String name,  int choice)
       Plugin_ptr[index](PLUGIN_GET_DEVICENAME, 0, deviceName);
     str += F("<option value='");
     str += Device[index].Number;
-    str += "'";
+    str += F("'");
     if (choice == Device[index].Number)
       str += F(" selected");
-    str += ">";
+    str += F(">");
     str += deviceName;
     str += F("</option>");
   }
@@ -1356,7 +1356,7 @@ void addPinSelect(boolean forI2C, String& str, String name,  int choice)
   {
     str += F("<option value='");
     str += optionValues[x];
-    str += "'";
+    str += F("'");
     if (optionValues[x] != -1) // empty selection can never be disabled...
     {
       //if (Settings.UseSerial && ((optionValues[x] == 1) || (optionValues[x] == 3)))
@@ -1364,7 +1364,7 @@ void addPinSelect(boolean forI2C, String& str, String name,  int choice)
     }
     if (choice == optionValues[x])
       str += F(" selected");
-    str += ">";
+    str += F(">");
     str += options[x];
     str += F("</option>");
   }
@@ -1397,16 +1397,16 @@ void addTaskSelect(String& str, String name,  int choice)
     LoadTaskSettings(x);
     str += F("<option value='");
     str += x;
-    str += "'";
+    str += F("'");
     if (choice == x)
       str += F(" selected");
     if (Settings.TaskDeviceNumber[x] == 0)
       str += F(" disabled");
-    str += ">";
+    str += F(">");
     str += x + 1;
-    str += " - ";
+    str += F(" - ");
     str += deviceName;
-    str += " - ";
+    str += F(" - ");
     str += ExtraTaskSettings.TaskDeviceName;
     str += F("</option>");
   }
@@ -1420,7 +1420,7 @@ void addTaskValueSelect(String& str, String name,  int choice, byte TaskIndex)
 {
   str += F("<select name='");
   str += name;
-  str += "'>";
+  str += F("'>");
 
   byte DeviceIndex = getDeviceIndex(Settings.TaskDeviceNumber[TaskIndex]);
 
@@ -1428,10 +1428,10 @@ void addTaskValueSelect(String& str, String name,  int choice, byte TaskIndex)
   {
     str += F("<option value='");
     str += x;
-    str += "'";
+    str += F("'");
     if (choice == x)
       str += F(" selected");
-    str += ">";
+    str += F(">");
     str += ExtraTaskSettings.TaskDeviceValueNames[x];
     str += F("</option>");
   }
@@ -2155,9 +2155,9 @@ void handle_sysinfo(EthernetClient client, String path) {
   {
     reply += F("<TR><TD>System Time:<TD>");
     reply += hour();
-    reply += ":";
+    reply += F(":");
     if (minute() < 10)
-      reply += "0";
+      reply += F("0");
     reply += minute();
   }
 
@@ -2278,7 +2278,7 @@ void addSelector(String& str, const String& id, int optionCount, const String op
       str += F(" ");
       str += attr[x];
     }
-    str += ">";
+    str += F(">");
     str += options[x];
     str += F("</option>");
   }
@@ -2309,7 +2309,7 @@ void addSelector_Item(String& str, const String& option, int index, boolean sele
     str += F(" ");
     str += attr;
   }
-  str += ">";
+  str += F(">");
   str += option;
   str += F("</option>");
 }

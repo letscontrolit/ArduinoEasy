@@ -64,17 +64,20 @@ void SendStatus(byte source, String status)
 \*********************************************************************************************/
 // handle MQTT messages
 void callback(char* c_topic, byte* b_payload, unsigned int length) {
-  char log[256];
-  char c_payload[256];
+  char c_payload[384];
   strncpy(c_payload,(char*)b_payload,length);
   c_payload[length] = 0;
   statusLED(true);
 
-  sprintf_P(log, PSTR("%s%s"), "MQTT : Topic: ", c_topic);
-  addLog(LOG_LEVEL_DEBUG, log);
-  sprintf_P(log, PSTR("%s%s"), "MQTT : Payload: ", c_payload);
+  String log;
+  log=F("MQTT : Topic: ");
+  log+=c_topic;
   addLog(LOG_LEVEL_DEBUG, log);
 
+  log=F("MQTT : Payload: ");
+  log+=c_payload;
+  addLog(LOG_LEVEL_DEBUG, log);
+  
   struct EventStruct TempEvent;
   TempEvent.String1 = c_topic;
   TempEvent.String2 = c_payload;
@@ -98,7 +101,7 @@ void MQTTConnect()
   String subscribeTo = "";
 
   String LWTTopic = Settings.MQTTsubscribe;
-  LWTTopic.replace("/#", "/status");
+  LWTTopic.replace(F("/#"), F("/status"));
   LWTTopic.replace(F("%sysname%"), Settings.Name);
   
   for (byte x = 1; x < 3; x++)
@@ -106,10 +109,11 @@ void MQTTConnect()
     String log = "";
     boolean MQTTresult = false;
 
+    String msg = F("Connection Lost");
     if ((SecuritySettings.ControllerUser[0] != 0) && (SecuritySettings.ControllerPassword[0] != 0))
-      MQTTresult = MQTTclient.connect(clientid.c_str(), SecuritySettings.ControllerUser, SecuritySettings.ControllerPassword, LWTTopic.c_str(), 0, 0, "Connection Lost");
+      MQTTresult = MQTTclient.connect(clientid.c_str(), SecuritySettings.ControllerUser, SecuritySettings.ControllerPassword, LWTTopic.c_str(), 0, 0, msg.c_str());
     else
-      MQTTresult = MQTTclient.connect(clientid.c_str(), LWTTopic.c_str(), 0, 0, "Connection Lost");
+      MQTTresult = MQTTclient.connect(clientid.c_str(), LWTTopic.c_str(), 0, 0, msg.c_str());
 
     if (MQTTresult)
     {
@@ -161,7 +165,7 @@ void MQTTCheck()
 void MQTTStatus(String& status)
 {
   String pubname = Settings.MQTTsubscribe;
-  pubname.replace("/#", "/status");
+  pubname.replace(F("/#"), F("/status"));
   pubname.replace(F("%sysname%"), Settings.Name);
   MQTTclient.publish(pubname.c_str(), status.c_str(),Settings.MQTTRetainFlag);
 }
