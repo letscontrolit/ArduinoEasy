@@ -329,7 +329,6 @@ void handle_root(EthernetClient client, String &post) {
       if (Nodes[x].ip[0] != 0)
       {
         char url[80];
-//        sprintf_P(url, PSTR("<a href='http://%u.%u.%u.%u'>%u.%u.%u.%u</a>"), Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3], Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3]);
         sprintf_P(url, PSTR("<a class='button-link' href='http://%u.%u.%u.%u'>%u.%u.%u.%u</a>"), Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3], Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3]);
         reply += F("<TR><TD>Unit ");
         reply += x;
@@ -512,7 +511,6 @@ void handle_config(EthernetClient client, String &post) {
   reply += F("'><TR><TD><TD><input class=\"button-link\" type='submit' value='Submit'>");
   reply += F("</table></form>");
   addFooter(reply);
-  //  debugRAM(3,reply.length());
   client.print(reply);
 }
 
@@ -715,8 +713,6 @@ void handle_devices(EthernetClient client, String &post) {
 
   update_device();
 
-  //  debugRAM(2,0);
-
   struct EventStruct TempEvent;
 
   String taskindex = WebServerarg(F("index"));
@@ -804,10 +800,8 @@ void handle_devices(EthernetClient client, String &post) {
         {
           if (Device[DeviceIndex].Type == DEVICE_TYPE_I2C)
           {
-            reply += F("GPIO-");
-            //reply += Settings.Pin_i2c_sda; // todo
-            reply += F("<BR>GPIO-");
-            //reply += Settings.Pin_i2c_scl; // todo
+            reply += F("GPIO-20");
+            reply += F("<BR>GPIO-21");
           }
           if (Device[DeviceIndex].Type == DEVICE_TYPE_ANALOG)
           {
@@ -1225,9 +1219,7 @@ void addDeviceSelect(String& str, String name,  int choice)
 
   str += F("<select name='");
   str += name;
-  //str += "'>";
-  str += "' LANGUAGE=javascript onchange=\"return dept_onchange(frmselect)\">";
-
+  str += F("' LANGUAGE=javascript onchange=\"return dept_onchange(frmselect)\">");
   str += F("<option value='0'></option>");
   for (byte x = 0; x <= deviceCount; x++)
   {
@@ -1407,16 +1399,16 @@ void addTaskSelect(String& str, String name,  int choice)
     str += x;
     str += "'";
     if (choice == x)
-      str += " selected";
+      str += F(" selected");
     if (Settings.TaskDeviceNumber[x] == 0)
-      str += " disabled";
+      str += F(" disabled");
     str += ">";
     str += x + 1;
     str += " - ";
     str += deviceName;
     str += " - ";
     str += ExtraTaskSettings.TaskDeviceName;
-    str += "</option>";
+    str += F("</option>");
   }
 }
 
@@ -1438,10 +1430,10 @@ void addTaskValueSelect(String& str, String name,  int choice, byte TaskIndex)
     str += x;
     str += "'";
     if (choice == x)
-      str += " selected";
+      str += F(" selected");
     str += ">";
     str += ExtraTaskSettings.TaskDeviceValueNames[x];
-    str += "</option>";
+    str += F("</option>");
   }
 }
 
@@ -1456,8 +1448,8 @@ void handle_rules(EthernetClient client, String &post) {
 
   if (rules.length() > 0)
   {
-    SD.remove("rules.txt");
-    File f = SD.open("rules.txt", FILE_WRITE);
+    SD.remove(F("rules.txt"));
+    File f = SD.open(F("rules.txt"), FILE_WRITE);
     if (f)
     {
       f.print(rules);
@@ -1475,7 +1467,7 @@ void handle_rules(EthernetClient client, String &post) {
   client.print(reply);
   reply = "";
 
-  File dataFile = SD.open("rules.txt");
+  File dataFile = SD.open(F("rules.txt"));
   int filesize = dataFile.size();
   while (dataFile.available()) {
     client.write(dataFile.read());
@@ -1715,7 +1707,7 @@ void handle_control(EthernetClient client, String &post) {
   if (command == F("event"))
   {
     eventBuffer = webrequest.substring(6);
-    client.print("OK");
+    client.print(F("OK"));
   }
 
   struct EventStruct TempEvent;
@@ -1734,9 +1726,9 @@ void handle_control(EthernetClient client, String &post) {
   client.println(F("HTTP/1.1 200 OK"));
   client.print(F("Content-Type:"));
   if (printToWebJSON)
-    client.print("Content-Type: application/json");
+    client.print(F("Content-Type: application/json"));
   else
-    client.print("Content-Type: text/html");
+    client.print(F("Content-Type: text/html"));
   client.println(F("Connection: close"));
   client.println("");
   client.print(reply);
@@ -1836,7 +1828,7 @@ bool handle_unknown(EthernetClient client, String path) {
   else if (path.endsWith(F(".ico"))) dataType = F("image/x-icon");
   else if (path.endsWith(F(".txt"))) dataType = F("application/octet-stream");
   else if (path.endsWith(F(".dat"))) dataType = F("application/octet-stream");
-  else if (path.endsWith(".esp")) return handle_custom(client, path);
+  else if (path.endsWith(F(".esp"))) return handle_custom(client, path);
   
   File dataFile = SD.open(path.c_str());
   if (!dataFile)
@@ -2011,7 +2003,7 @@ void handle_i2cscanner(EthernetClient client, String path) {
     error = Wire.endTransmission();
     if (error == 0)
     {
-      reply += "<TR><TD>0x";
+      reply += F("<TR><TD>0x");
       reply += String(address, HEX);
       reply += "<TD>";
       switch (address)
@@ -2112,7 +2104,7 @@ void handle_log(EthernetClient client, String path) {
   reply += F("<script language='JavaScript'>function RefreshMe(){window.location = window.location}setTimeout('RefreshMe()', 3000);</script>");
   reply += F("<table><TH>Log<TR><TD>");
 
-  File dataFile = SD.open("log.txt");
+  File dataFile = SD.open(F("log.txt"));
   if (!dataFile)
     return;
   unsigned long filesize = dataFile.size();

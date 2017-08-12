@@ -418,12 +418,11 @@ void fileSystemCheck()
   {
     String log = F("SD Mount successful");
     Serial.println(log);
-    //ExecuteCommand(0,"sdcard");
     if (!SD.exists("config.txt"))
     {
       String log = F("Creating config.txt");
       Serial.println(log);
-      File f = SD.open("config.txt", FILE_WRITE);
+      File f = SD.open(F("config.txt"), FILE_WRITE);
       if (f)
       {
         for (unsigned long x = 0; x < 32768; x++)
@@ -432,14 +431,14 @@ void fileSystemCheck()
       }
       log = F("Ready creating config.txt");
       Serial.println(log);
-      f = SD.open("security.txt", FILE_WRITE);
+      f = SD.open(F("security.txt"), FILE_WRITE);
       if (f)
       {
         for (int x = 0; x < 512; x++)
           f.write((byte)0);
         f.close();
       }
-      f = SD.open("rules.txt", FILE_WRITE);
+      f = SD.open(F("rules.txt"), FILE_WRITE);
       f.close();
     }
   }
