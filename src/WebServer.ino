@@ -1894,7 +1894,9 @@ boolean handle_custom(EthernetClient client, String path) {
     {
       if (Nodes[x].ip[0] != 0 || x == Settings.Unit)
       {
-      String name = String(x);
+      String name = String(x) + F(" - ");
+      if (x == Settings.Unit)
+        name += Settings.Name;
       addSelector_Item(reply, name, x, choice == x, false, F(""));
       }
     } 
@@ -1952,7 +1954,7 @@ boolean handle_custom(EthernetClient client, String path) {
     if (path.startsWith(F("dashboard")))
     {
       // if the custom page does not exist, create a basic task value overview page in case of dashboard request...
-      reply += F("<meta name=\"viewport\" content=\"width=width=device-width, initial-scale=1\"><STYLE>* {font-family:sans-serif; font-size:16pt;}.button {margin:4px; padding:4px 16px; background-color:#07D; color:#FFF; text-decoration:none; border-radius:4px}</STYLE>");
+      reply += F("<meta name=\"viewport\" content=\"width=width=device-width, initial-scale=1\"><STYLE>* {font-family:sans-serif; font-size:14pt;}.button {margin:4px; padding:4px 16px; background-color:#07D; color:#FFF; text-decoration:none; border-radius:4px}</STYLE>");
       reply += F("<table>");
       for (byte x = 0; x < TASKS_MAX; x++)
       {

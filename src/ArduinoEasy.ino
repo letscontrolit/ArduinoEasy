@@ -74,7 +74,7 @@
 #define socketdebug                     false
 #define ARDUINO_PROJECT_PID       2016110201L
 #define VERSION                             2
-#define BUILD                             150
+#define BUILD                             151
 #define BUILD_NOTES                        ""
 
 #define NODE_TYPE_ID_ESP_EASY_STD           1

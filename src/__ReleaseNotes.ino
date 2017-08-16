@@ -1,3 +1,13 @@
+// R151 14-08-2017
+// Update Mini Dashboard
+
+// R150 12-08-2017
+// Fixed some webgui bugs and reduced RAM usage
+// Fixed syslog feature
+// Added some plugins: Dallas, DHT, DHT12
+// Added authentication for C001 (Base64 lib added)
+// Added Mini Dashboard
+
 // R147 08-12-2016
 // First alpha version (Proof Of Concept!)
 // Based on ESP Easy R147
@@ -10,4 +20,3 @@
 // Known issues:
 //   WD message was incorrect, failures reported as freemem, freemem is missing, workaround is using string object...
 //   when timed reboot, system does not reboot ???
-
