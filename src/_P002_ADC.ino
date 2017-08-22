@@ -3,7 +3,7 @@
 //#######################################################################################################
 
 // Adapted from ESP Easy, changes:
-//   WebServer.arg() -> WebServerarg()
+//   WebServer.arg() -> WebServer.arg()
 //   port selection as we have a lot of analog ports here...
 
 #define PLUGIN_002

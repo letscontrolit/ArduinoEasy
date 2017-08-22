@@ -3,7 +3,7 @@
 //#######################################################################################################
 
 // Adapted from ESP Easy, changes:
-//   WebServer.arg() -> WebServerarg()
+//   WebServer.arg() -> WebServer.arg()
 
 #define PLUGIN_033
 #define PLUGIN_ID_033         33
@@ -89,7 +89,7 @@ boolean Plugin_033(byte function, struct EventStruct *event, String& string)
 
     case PLUGIN_WEBFORM_SAVE:
       {
-        String plugin1 = WebServerarg(F("plugin_033_sensortype"));
+        String plugin1 = WebServer.arg(F("plugin_033_sensortype"));
         Settings.TaskDevicePluginConfig[event->TaskIndex][0] = plugin1.toInt();
         success = true;
         break;

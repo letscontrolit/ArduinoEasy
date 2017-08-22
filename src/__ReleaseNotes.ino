@@ -1,3 +1,10 @@
+// R152 21-08-2017
+// Fixed a bug with getting NTP time when nodelist is active and fixed a socket issue when combined with MQTT
+// Dummy WebServer class to mimic WebServer.arg calls from plugins
+// Fixed GUI formatting bug when NPT disabled
+// Added some GUI handlers from the Mega branch
+// Added NodeType in main screen
+
 // R151 14-08-2017
 // Update Mini Dashboard
 

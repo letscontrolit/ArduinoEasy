@@ -1,7 +1,46 @@
 String webdata = "";
 
+class DummyWebServer
+{
+public:
+  String arg(String name);        // get request argument value by name
+protected:
+};
+
+String DummyWebServer::arg(String arg)
+{
+  #ifdef DEBUG_WEB2
+    Serial.print("webdata3:");
+    Serial.println(webdata);
+  #endif
+  
+  arg = "&" + arg;
+
+  #ifdef DEBUG_WEB2
+    Serial.print("arg:");
+    Serial.println(arg);
+  #endif
+
+  String returnarg = "";
+  int pos = webdata.indexOf(arg);
+  if (pos >= 0)
+  {
+    returnarg = webdata.substring(pos+1,pos+81); // max field content 80 ?
+    pos = returnarg.indexOf("&");
+    if (pos > 0)
+      returnarg = returnarg.substring(0, pos);
+    pos = returnarg.indexOf("=");
+    if (pos > 0)
+      returnarg = returnarg.substring(pos + 1);
+  }
+  return returnarg;
+}
+
+DummyWebServer WebServer;
+
+
 void WebServerHandleClient() {
-  EthernetClient client = WebServer.available();
+  EthernetClient client = MyWebServer.available();
   if (client) {
 #if socketdebug
     ShowSocketStatus();
@@ -145,35 +184,6 @@ void WebServerHandleClient() {
   }
 }
 
-String WebServerarg(String arg)
-{
-  #ifdef DEBUG_WEB2
-    Serial.print("webdata3:");
-    Serial.println(webdata);
-  #endif
-  
-  arg = "&" + arg;
-
-  #ifdef DEBUG_WEB2
-    Serial.print("arg:");
-    Serial.println(arg);
-  #endif
-
-  String returnarg = "";
-  int pos = webdata.indexOf(arg);
-  if (pos >= 0)
-  {
-    returnarg = webdata.substring(pos+1,pos+81); // max field content 80 ?
-    pos = returnarg.indexOf("&");
-    if (pos > 0)
-      returnarg = returnarg.substring(0, pos);
-    pos = returnarg.indexOf("=");
-    if (pos > 0)
-      returnarg = returnarg.substring(pos + 1);
-  }
-  return returnarg;
-}
-
 
 //********************************************************************************
 // Add top menu
@@ -252,7 +262,7 @@ void handle_root(EthernetClient client, String &post) {
 
   //if (!isLoggedIn()) return;
 
-  String sCommand = WebServerarg(F("cmd"));
+  String sCommand = WebServer.arg(F("cmd"));
 
   if (strcasecmp_P(sCommand.c_str(), PSTR("reboot")) != 0)
   {
@@ -279,16 +289,18 @@ void handle_root(EthernetClient client, String &post) {
     reply += F(" ");
     reply += F(BUILD_NOTES);
 
+    reply += F("<TR><TD>System Time:<TD>");
     if (Settings.UseNTP)
     {
-      reply += F("<TR><TD>System Time:<TD>");
       reply += hour();
       reply += F(":");
       if (minute() < 10)
         reply += F("0");
       reply += minute();
     }
-
+    else
+      reply += F("NTP Disabled");
+    
     reply += F("<TD><TD>Uptime:<TD>");
     char strUpTime[40];
     int minutes = wdcounter / 2;
@@ -309,7 +321,7 @@ void handle_root(EthernetClient client, String &post) {
     }
 
     reply += F("<TD><TD>Free Mem:<TD>");
-    reply += FreeMem();
+    reply += freeMem;
 
     char str[20];
     sprintf_P(str, PSTR("%u.%u.%u.%u"), ip[0], ip[1], ip[2], ip[3]);
@@ -323,7 +335,11 @@ void handle_root(EthernetClient client, String &post) {
     client.print(reply);
     reply = "";
 
-    reply += F("<TR><TH>Node List:<TH>Build<TH>IP<TH>Age<TH><TR><TD><TD><TD>");
+    #if FEATURE_NODELIST_NAMES
+        reply += F("<TR><TH>Node List:<TH>Name<TH>Build<TH>Type<TH>IP<TH>Age<TH><TR><TD><TD><TD>");
+    #else
+        reply += F("<TR><TH>Node List:<TH>Build<TH>Type<TH>IP<TH>Age<TH><TR><TD><TD><TD>");
+    #endif
     for (byte x = 0; x < UNIT_MAX; x++)
     {
       if (Nodes[x].ip[0] != 0)
@@ -332,9 +348,36 @@ void handle_root(EthernetClient client, String &post) {
         sprintf_P(url, PSTR("<a class='button-link' href='http://%u.%u.%u.%u'>%u.%u.%u.%u</a>"), Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3], Nodes[x].ip[0], Nodes[x].ip[1], Nodes[x].ip[2], Nodes[x].ip[3]);
         reply += F("<TR><TD>Unit ");
         reply += x;
+        #if FEATURE_NODELIST_NAMES
+        reply += F("<TD>");        
+        if (x != Settings.Unit)
+          reply += Nodes[x].nodeName;
+        else
+          reply += Settings.Name;
+        #endif
         reply += F("<TD>");
         if (Nodes[x].build)
           reply += Nodes[x].build;
+        reply += F("<TD>");  
+        if (Nodes[x].nodeType)
+          switch (Nodes[x].nodeType)
+          {
+            case NODE_TYPE_ID_ESP_EASY_STD:
+              reply += F("ESP Easy");
+              break;
+            case NODE_TYPE_ID_ESP_EASYM_STD:
+              reply += F("ESP Easy Mega");
+              break;
+            case NODE_TYPE_ID_ESP_EASY32_STD:
+              reply += F("ESP Easy 32");
+              break;
+            case NODE_TYPE_ID_ARDUINO_EASY_STD:
+              reply += F("Arduino Easy");
+              break;
+            case NODE_TYPE_ID_NANO_EASY_STD:
+              reply += F("Nano Easy");
+              break;
+          }
         reply += F("<TD>");
         reply += url;
         reply += F("<TD>");
@@ -525,7 +568,7 @@ void update_config()
   #endif
   
   String arg = "";
-  arg = WebServerarg(F("name"));
+  arg = WebServer.arg(F("name"));
 
   #ifdef DEBUG_WEB
   Serial.print("name:");
@@ -535,10 +578,10 @@ void update_config()
   if (arg[0] != 0)
   {
     strncpy(Settings.Name, arg.c_str(), sizeof(Settings.Name));
-    arg = WebServerarg(F("password"));
+    arg = WebServer.arg(F("password"));
     strncpy(SecuritySettings.Password, arg.c_str(), sizeof(SecuritySettings.Password));
 
-    arg = WebServerarg(F("protocol"));
+    arg = WebServer.arg(F("protocol"));
     if (Settings.Protocol != arg.toInt())
     {
       Settings.Protocol = arg.toInt();
@@ -553,17 +596,17 @@ void update_config()
       {
         byte ProtocolIndex = getProtocolIndex(Settings.Protocol);
         CPlugin_ptr[ProtocolIndex](CPLUGIN_WEBFORM_SAVE, 0, dummyString);
-        arg = WebServerarg(F("usedns"));
+        arg = WebServer.arg(F("usedns"));
         Settings.UseDNS = arg.toInt();
         if (Settings.UseDNS)
         {
-          arg = WebServerarg(F("controllerhostname"));
+          arg = WebServer.arg(F("controllerhostname"));
           strncpy(Settings.ControllerHostName, arg.c_str(), sizeof(Settings.ControllerHostName));
           getIPfromHostName();
         }
         else
         {
-          arg = WebServerarg(F("controllerip"));
+          arg = WebServer.arg(F("controllerip"));
           if (arg.length() != 0)
           {
             arg.toCharArray(tmpString, 26);
@@ -571,31 +614,31 @@ void update_config()
           }
         }
 
-        arg = WebServerarg(F("controllerport"));
+        arg = WebServer.arg(F("controllerport"));
         Settings.ControllerPort = arg.toInt();
-        arg = WebServerarg(F("controlleruser"));
+        arg = WebServer.arg(F("controlleruser"));
         strncpy(SecuritySettings.ControllerUser, arg.c_str(), sizeof(SecuritySettings.ControllerUser));
-        arg = WebServerarg(F("controllerpassword"));
+        arg = WebServer.arg(F("controllerpassword"));
         strncpy(SecuritySettings.ControllerPassword, arg.c_str(), sizeof(SecuritySettings.ControllerPassword));
       }
     }
 
-    arg = WebServerarg(F("delay"));
+    arg = WebServer.arg(F("delay"));
     Settings.Delay = arg.toInt();
 
-    arg = WebServerarg(F("espip"));
+    arg = WebServer.arg(F("espip"));
     arg.toCharArray(tmpString, 26);
     str2ip(tmpString, Settings.IP);
-    arg = WebServerarg(F("espgateway"));
+    arg = WebServer.arg(F("espgateway"));
     arg.toCharArray(tmpString, 26);
     str2ip(tmpString, Settings.Gateway);
-    arg = WebServerarg(F("espsubnet"));
+    arg = WebServer.arg(F("espsubnet"));
     arg.toCharArray(tmpString, 26);
     str2ip(tmpString, Settings.Subnet);
-    arg = WebServerarg(F("espdns"));
+    arg = WebServer.arg(F("espdns"));
     arg.toCharArray(tmpString, 26);
     str2ip(tmpString, Settings.DNS);
-    arg = WebServerarg(F("unit"));
+    arg = WebServer.arg(F("unit"));
     Settings.Unit = arg.toInt();
     SaveSettings();
   }
@@ -607,20 +650,20 @@ void update_config()
 void handle_hardware(EthernetClient client, String &post) {
   //if (!isLoggedIn()) return;
 
-  String edit = WebServerarg(F("edit"));
+  String edit = WebServer.arg(F("edit"));
 
   if (edit.length() != 0)
   {
-    Settings.PinBootStates[2]  =  WebServerarg(F("p2")).toInt();
-    Settings.PinBootStates[3]  =  WebServerarg(F("p3")).toInt();
-    Settings.PinBootStates[4]  =  WebServerarg(F("p4")).toInt();
-    Settings.PinBootStates[5]  =  WebServerarg(F("p5")).toInt();
-    Settings.PinBootStates[6] =  WebServerarg(F("p6")).toInt();
-    Settings.PinBootStates[7] =  WebServerarg(F("p7")).toInt();
-    Settings.PinBootStates[8] =  WebServerarg(F("p8")).toInt();
-    Settings.PinBootStates[9] =  WebServerarg(F("p9")).toInt();
-    Settings.PinBootStates[11] =  WebServerarg(F("p11")).toInt();
-    Settings.PinBootStates[12] =  WebServerarg(F("p12")).toInt();
+    Settings.PinBootStates[2]  =  WebServer.arg(F("p2")).toInt();
+    Settings.PinBootStates[3]  =  WebServer.arg(F("p3")).toInt();
+    Settings.PinBootStates[4]  =  WebServer.arg(F("p4")).toInt();
+    Settings.PinBootStates[5]  =  WebServer.arg(F("p5")).toInt();
+    Settings.PinBootStates[6] =  WebServer.arg(F("p6")).toInt();
+    Settings.PinBootStates[7] =  WebServer.arg(F("p7")).toInt();
+    Settings.PinBootStates[8] =  WebServer.arg(F("p8")).toInt();
+    Settings.PinBootStates[9] =  WebServer.arg(F("p9")).toInt();
+    Settings.PinBootStates[11] =  WebServer.arg(F("p11")).toInt();
+    Settings.PinBootStates[12] =  WebServer.arg(F("p12")).toInt();
     SaveSettings();
   }
 
@@ -715,12 +758,12 @@ void handle_devices(EthernetClient client, String &post) {
 
   struct EventStruct TempEvent;
 
-  String taskindex = WebServerarg(F("index"));
+  String taskindex = WebServer.arg(F("index"));
   byte index = taskindex.toInt();
-  byte page = WebServerarg(F("page")).toInt();
+  byte page = WebServer.arg(F("page")).toInt();
   if (page == 0)
     page = 1;
-  byte setpage = WebServerarg(F("setpage")).toInt();
+  byte setpage = WebServer.arg(F("setpage")).toInt();
   if (setpage > 0)
   {
     if (setpage <= (TASKS_MAX / 4))
@@ -1054,8 +1097,8 @@ void update_device()
   struct EventStruct TempEvent;
 
   String arg = "";
-  String taskindex = WebServerarg(F("index"));
-  String taskdevicenumber = WebServerarg(F("taskdevicenumber"));
+  String taskindex = WebServer.arg(F("index"));
+  String taskdevicenumber = WebServer.arg(F("taskdevicenumber"));
   String taskdeviceformula[VARS_PER_TASK];
   String taskdevicevaluename[VARS_PER_TASK];
   String taskdevicevaluedecimals[VARS_PER_TASK];
@@ -1066,20 +1109,20 @@ void update_device()
     String arg = F("taskdeviceformula");
     arg += varNr + 1;
     arg.toCharArray(argc, 25);
-    taskdeviceformula[varNr] = WebServerarg(argc);
+    taskdeviceformula[varNr] = WebServer.arg(argc);
 
     arg = F("taskdevicevaluename");
     arg += varNr + 1;
     arg.toCharArray(argc, 25);
-    taskdevicevaluename[varNr] = WebServerarg(argc);
+    taskdevicevaluename[varNr] = WebServer.arg(argc);
 
     arg = F("taskdevicevaluedecimals");
     arg += varNr + 1;
     arg.toCharArray(argc, 25);
-    taskdevicevaluedecimals[varNr] = WebServerarg(argc);
+    taskdevicevaluedecimals[varNr] = WebServer.arg(argc);
   }
 
-  String edit = WebServerarg(F("edit"));
+  String edit = WebServer.arg(F("edit"));
 
   byte index = taskindex.toInt();
   byte DeviceIndex = 0;
@@ -1102,7 +1145,7 @@ void update_device()
       Settings.TaskDeviceNumber[index - 1] = taskdevicenumber.toInt();
       DeviceIndex = getDeviceIndex(Settings.TaskDeviceNumber[index - 1]);
 
-      arg = WebServerarg(F("taskdevicetimer"));
+      arg = WebServer.arg(F("taskdevicetimer"));
       if (arg.toInt() > 0)
         Settings.TaskDeviceTimer[index - 1] = arg.toInt();
       else
@@ -1113,14 +1156,14 @@ void update_device()
           Settings.TaskDeviceTimer[index - 1] = 0;
       }
 
-      arg = WebServerarg(F("taskdevicename"));
+      arg = WebServer.arg(F("taskdevicename"));
       arg.toCharArray(tmpString, 41);
       strcpy(ExtraTaskSettings.TaskDeviceName, tmpString);
 
-      arg = WebServerarg(F("taskdeviceport"));
+      arg = WebServer.arg(F("taskdeviceport"));
       Settings.TaskDevicePort[index - 1] = arg.toInt();
 
-      arg = WebServerarg(F("taskdeviceid"));
+      arg = WebServer.arg(F("taskdeviceid"));
       if (Settings.TaskDeviceNumber[index - 1] != 0)
         Settings.TaskDeviceID[index - 1] = arg.toInt();
       else
@@ -1128,36 +1171,36 @@ void update_device()
         
       if (Device[DeviceIndex].Type == DEVICE_TYPE_SINGLE)
       {
-        arg = WebServerarg(F("taskdevicepin1"));
+        arg = WebServer.arg(F("taskdevicepin1"));
         Settings.TaskDevicePin1[index - 1] = arg.toInt();
       }
       if (Device[DeviceIndex].Type == DEVICE_TYPE_DUAL)
       {
-        arg = WebServerarg(F("taskdevicepin1"));
+        arg = WebServer.arg(F("taskdevicepin1"));
         Settings.TaskDevicePin1[index - 1] = arg.toInt();
-        arg = WebServerarg(F("taskdevicepin2"));
+        arg = WebServer.arg(F("taskdevicepin2"));
         Settings.TaskDevicePin2[index - 1] = arg.toInt();
       }
 
-      arg = WebServerarg(F("taskdevicepin3"));
+      arg = WebServer.arg(F("taskdevicepin3"));
       if (arg.length() != 0)
         Settings.TaskDevicePin3[index - 1] = arg.toInt();
       
       if (Device[DeviceIndex].PullUpOption)
       {
-        arg = WebServerarg(F("taskdevicepin1pullup"));
+        arg = WebServer.arg(F("taskdevicepin1pullup"));
         Settings.TaskDevicePin1PullUp[index - 1] = (arg == "on");
       }
       
       if (Device[DeviceIndex].InverseLogicOption)
       {
-        arg = WebServerarg(F("taskdevicepin1inversed"));
+        arg = WebServer.arg(F("taskdevicepin1inversed"));
         Settings.TaskDevicePin1Inversed[index - 1] = (arg == "on");
       }
       
       if (Device[DeviceIndex].SendDataOption)
       {
-        arg = WebServerarg(F("taskdevicesenddata"));
+        arg = WebServer.arg(F("taskdevicesenddata"));
         Settings.TaskDeviceSendData[index - 1] = (arg == "on");
       }
       
@@ -1165,7 +1208,7 @@ void update_device()
       {
         if (Device[DeviceIndex].GlobalSyncOption)
         {
-          arg = WebServerarg(F("taskdeviceglobalsync"));
+          arg = WebServer.arg(F("taskdeviceglobalsync"));
           Settings.TaskDeviceGlobalSync[index - 1] = (arg == "on");
         }
         
@@ -1493,7 +1536,7 @@ void handle_rules(EthernetClient client, String &post) {
 void handle_tools(EthernetClient client, String &post) {
   //if (!isLoggedIn()) return;
 
-  String webrequest = WebServerarg(F("cmd"));
+  String webrequest = WebServer.arg(F("cmd"));
 
   String reply = "";
 
@@ -1644,51 +1687,51 @@ void update_advanced()
 {
   char tmpString[81];
   String arg = "";
-  String edit = WebServerarg(F("edit"));
+  String edit = WebServer.arg(F("edit"));
 
   if (edit.length() != 0)
   {
-    arg = WebServerarg(F("mqttsubscribe"));
+    arg = WebServer.arg(F("mqttsubscribe"));
     arg.toCharArray(tmpString, 81);
-    arg = WebServerarg(F("mqttpublish"));
+    arg = WebServer.arg(F("mqttpublish"));
     strcpy(Settings.MQTTsubscribe, tmpString);
     arg.toCharArray(tmpString, 81);
     strcpy(Settings.MQTTpublish, tmpString);
-    arg = WebServerarg(F("messagedelay"));
+    arg = WebServer.arg(F("messagedelay"));
     Settings.MessageDelay = arg.toInt();
-    arg = WebServerarg(F("ip"));
+    arg = WebServer.arg(F("ip"));
     Settings.IP_Octet = arg.toInt();
-    arg  = WebServerarg(F("ntphost"));
+    arg  = WebServer.arg(F("ntphost"));
     arg.toCharArray(tmpString, 64);
     strcpy(Settings.NTPHost, tmpString);
-    arg = WebServerarg(F("timezone"));
+    arg = WebServer.arg(F("timezone"));
     Settings.TimeZone = arg.toInt();
-    arg = WebServerarg(F("syslogip"));
+    arg = WebServer.arg(F("syslogip"));
     arg.toCharArray(tmpString, 26);
     str2ip(tmpString, Settings.Syslog_IP);
-    arg = WebServerarg(F("udpport"));
+    arg = WebServer.arg(F("udpport"));
     Settings.UDPPort = arg.toInt();
-    arg = WebServerarg(F("sysloglevel"));
+    arg = WebServer.arg(F("sysloglevel"));
     Settings.SyslogLevel = arg.toInt();
-    arg = WebServerarg(F("useserial"));
+    arg = WebServer.arg(F("useserial"));
     Settings.UseSerial = (arg == "on");
-    arg = WebServerarg(F("serialloglevel"));
+    arg = WebServer.arg(F("serialloglevel"));
     Settings.SerialLogLevel = arg.toInt();
-    arg = WebServerarg(F("sdloglevel"));
+    arg = WebServer.arg(F("sdloglevel"));
     Settings.SDLogLevel = arg.toInt();
-    arg = WebServerarg(F("baudrate"));
+    arg = WebServer.arg(F("baudrate"));
     Settings.BaudRate = arg.toInt();
-    arg = WebServerarg(F("usentp"));
+    arg = WebServer.arg(F("usentp"));
     Settings.UseNTP = (arg == "on");
-    arg = WebServerarg(F("dst"));
+    arg = WebServer.arg(F("dst"));
     Settings.DST = (arg == "on");
-    arg = WebServerarg(F("wdi2caddress"));
+    arg = WebServer.arg(F("wdi2caddress"));
     Settings.WDI2CAddress = arg.toInt();
-    arg = WebServerarg(F("userules"));
+    arg = WebServer.arg(F("userules"));
     Settings.UseRules = (arg == "on");
-    arg = WebServerarg(F("globalsync"));
+    arg = WebServer.arg(F("globalsync"));
     Settings.GlobalSync = (arg == "on");
-    arg = WebServerarg(F("cft"));
+    arg = WebServer.arg(F("cft"));
     Settings.ConnectionFailuresThreshold = arg.toInt();
     SaveSettings();
   }
@@ -1700,7 +1743,7 @@ void update_advanced()
 //********************************************************************************
 void handle_control(EthernetClient client, String &post) {
 
-  String webrequest = WebServerarg(F("cmd"));
+  String webrequest = WebServer.arg(F("cmd"));
 
   // in case of event, store to buffer and return...
   String command = parseString(webrequest, 1);
@@ -1742,7 +1785,7 @@ void handle_control(EthernetClient client, String &post) {
 //********************************************************************************
 void handle_SDfilelist(EthernetClient client, String &post) {
 
-  String fdelete = WebServerarg(F("delete"));
+  String fdelete = WebServer.arg(F("delete"));
 
   if (fdelete.length() > 0)
   {
@@ -1873,8 +1916,8 @@ boolean handle_custom(EthernetClient client, String path) {
     reply += F("<form name='frmselect' method='post'>");
 
     // handle page redirects to other unit's as requested by the unit dropdown selector
-    byte unit = WebServerarg(F("unit")).toInt();
-    byte btnunit = WebServerarg(F("btnunit")).toInt();
+    byte unit = WebServer.arg(F("unit")).toInt();
+    byte btnunit = WebServer.arg(F("btnunit")).toInt();
     if(!unit) unit = btnunit; // unit element prevails, if not used then set to btnunit
     if (unit && unit != Settings.Unit)
     {
@@ -1897,6 +1940,10 @@ boolean handle_custom(EthernetClient client, String path) {
       String name = String(x) + F(" - ");
       if (x == Settings.Unit)
         name += Settings.Name;
+      #if FEATURE_NODELIST_NAMES
+        else
+          name += Nodes[x].nodeName;
+      #endif        
       addSelector_Item(reply, name, x, choice == x, false, F(""));
       }
     } 
@@ -1923,7 +1970,7 @@ boolean handle_custom(EthernetClient client, String path) {
   }
 
   // handle commands from a custom page
-  String webrequest = WebServerarg(F("cmd"));
+  String webrequest = WebServer.arg(F("cmd"));
   if (webrequest.length() > 0){
     struct EventStruct TempEvent;
     parseCommandString(&TempEvent, webrequest);
@@ -2140,7 +2187,6 @@ void handle_log(EthernetClient client, String path) {
 void handle_sysinfo(EthernetClient client, String path) {
   //if (!isLoggedIn()) return;
 
-  int freeMem = FreeMem();
   String reply = "";
   
   IPAddress ip = Ethernet.localIP();
@@ -2255,6 +2301,30 @@ String URLDecode(const char *src)
   return rString;
 }
 
+void addFormSelectorI2C(String& str, const String& id, int addressCount, const int addresses[], int selectedIndex)
+{
+  String options[addressCount];
+  for (byte x = 0; x < addressCount; x++)
+  {
+    options[x] = F("0x");
+    options[x] += String(addresses[x], HEX);
+    if (x == 0)
+      options[x] += F(" - (default)");
+  }
+  addFormSelector(str, F("I2C Address"), id, addressCount, options, addresses, NULL, selectedIndex, false);
+}
+
+void addFormSelector(String& str, const String& label, const String& id, int optionCount, const String options[], const int indices[], int selectedIndex)
+{
+  addFormSelector(str, label, id, optionCount, options, indices, NULL, selectedIndex, false);
+}
+
+void addFormSelector(String& str, const String& label, const String& id, int optionCount, const String options[], const int indices[], const String attr[], int selectedIndex, boolean reloadonchange)
+{
+  addRowLabel(str, label);
+  addSelector(str, id, optionCount, options, indices, attr, selectedIndex, reloadonchange);
+}
+
 void addSelector(String& str, const String& id, int optionCount, const String options[], const int indices[], const String attr[], int selectedIndex, boolean reloadonchange)
 {
   int index;
@@ -2316,9 +2386,246 @@ void addSelector_Item(String& str, const String& option, int index, boolean sele
   str += F("</option>");
 }
 
-
 void addSelector_Foot(String& str)
 {
   str += F("</select>");
+}
+
+void addUnit(String& str, const String& unit)
+{
+  str += F(" [");
+  str += unit;
+  str += F("]");
+}
+
+
+void addRowLabel(String& str, const String& label)
+{
+  str += F("<TR><TD>");
+  str += label;
+  str += F(":<TD>");
+}
+
+void addButton(String& str, const String &url, const String &label)
+{
+  str += F("<a class='button link' href='");
+  str += url;
+  str += F("'>");
+  str += label;
+  str += F("</a>");
+}
+
+void addSubmitButton(String& str)
+{
+  str += F("<input class='button link' type='submit' value='Submit'>");
+}
+
+//********************************************************************************
+// Add a header
+//********************************************************************************
+void addFormHeader(String& str, const String& header1, const String& header2)
+{
+  str += F("<TR><TH>");
+  str += header1;
+  str += F("<TH>");
+  str += header2;
+  str += F("");
+}
+
+void addFormHeader(String& str, const String& header)
+{
+  str += F("<TR><TD colspan='2'><h2>");
+  str += header;
+  str += F("</h2>");
+}
+
+
+//********************************************************************************
+// Add a sub header
+//********************************************************************************
+void addFormSubHeader(String& str, const String& header)
+{
+  str += F("<TR><TD colspan='2'><h3>");
+  str += header;
+  str += F("</h3>");
+}
+
+
+//********************************************************************************
+// Add a note as row start
+//********************************************************************************
+void addFormNote(String& str, const String& text)
+{
+  str += F("<TR><TD><TD><div class='note'>Note: ");
+  str += text;
+  str += F("</div>");
+}
+
+
+//********************************************************************************
+// Add a separator as row start
+//********************************************************************************
+void addFormSeparator(String& str)
+{
+  str += F("<TR><TD colspan='2'><hr>");
+}
+
+
+//********************************************************************************
+// Add a checkbox
+//********************************************************************************
+void addCheckBox(String& str, const String& id, boolean checked)
+{
+  str += F("<input type=checkbox id='");
+  str += id;
+  str += F("' name='");
+  str += id;
+  str += F("'");
+  if (checked)
+    str += F(" checked");
+  str += F(">");
+}
+
+void addFormCheckBox(String& str, const String& label, const String& id, boolean checked)
+{
+  addRowLabel(str, label);
+  addCheckBox(str, id, checked);
+}
+
+
+//********************************************************************************
+// Add a numeric box
+//********************************************************************************
+void addNumericBox(String& str, const String& id, int value, int min, int max)
+{
+  str += F("<input type='number' name='");
+  str += id;
+  str += F("'");
+  if (min != INT_MIN)
+  {
+    str += F(" min=");
+    str += min;
+  }
+  if (max != INT_MAX)
+  {
+    str += F(" max=");
+    str += max;
+  }
+  str += F(" style='width:5em;' value=");
+  str += value;
+  str += F(">");
+}
+
+void addNumericBox(String& str, const String& id, int value)
+{
+  addNumericBox(str, id, value, INT_MIN, INT_MAX);
+}
+
+void addFormNumericBox(String& str, const String& label, const String& id, int value, int min, int max)
+{
+  addRowLabel(str,  label);
+  addNumericBox(str, id, value, min, max);
+}
+
+void addFormNumericBox(String& str, const String& label, const String& id, int value)
+{
+  addFormNumericBox(str, label, id, value, INT_MIN, INT_MAX);
+}
+
+
+
+void addTextBox(String& str, const String& id, const String&  value, int maxlength)
+{
+  str += F("<input type='text' name='");
+  str += id;
+  str += F("' maxlength=");
+  str += maxlength;
+  str += F(" value='");
+  str += value;
+  str += F("'>");
+}
+
+void addFormTextBox(String& str, const String& label, const String& id, const String&  value, int maxlength)
+{
+  addRowLabel(str, label);
+  addTextBox(str, id, value, maxlength);
+}
+
+
+void addFormPasswordBox(String& str, const String& label, const String& id, const String& password, int maxlength)
+{
+  addRowLabel(str, label);
+  str += F("<input type='password' name='");
+  str += id;
+  str += F("' maxlength=");
+  str += maxlength;
+  str += F(" value='");
+  if (password != F(""))   //no password?
+    str += F("*****");
+  //str += password;   //password will not published over HTTP
+  str += F("'>");
+}
+
+void copyFormPassword(const String& id, char* pPassword, int maxlength)
+{
+  String password = WebServer.arg(id);
+  if (password == F("*****"))   //no change?
+    return;
+  strncpy(pPassword, password.c_str(), maxlength);
+}
+
+void addFormIPBox(String& str, const String& label, const String& id, const byte ip[4])
+{
+  char strip[20];
+  if (ip[0] == 0 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0)
+    strip[0] = 0;
+  else
+    sprintf_P(strip, PSTR("%u.%u.%u.%u"), ip[0], ip[1], ip[2], ip[3]);
+
+  addRowLabel(str, label);
+  str += F("<input type='text' name='");
+  str += id;
+  str += F("' value='");
+  str += strip;
+  str += F("'>");
+}
+
+// adds a Help Button with points to the the given Wiki Subpage
+void addHelpButton(String& str, const String& url)
+{
+  str += F(" <a class=\"button help\" href=\"http://www.letscontrolit.com/wiki/index.php/");
+  str += url;
+  str += F("\" target=\"_blank\">&#10068;</a>");
+}
+
+
+void addEnabled(String& str, boolean enabled)
+{
+  if (enabled)
+    str += F("<span class='enabled on'>&#10004;</span>");
+  else
+    str += F("<span class='enabled off'>&#10008;</span>");
+}
+
+bool isFormItemChecked(const String& id)
+{
+  return WebServer.arg(id) == "on";
+}
+
+int getFormItemInt(const String& id)
+{
+  String val = WebServer.arg(id);
+  return val.toInt();
+}
+
+float getFormItemFloat(const String& id)
+{
+  String val = WebServer.arg(id);
+  return val.toFloat();
+}
+
+bool isFormItem(const String& id)
+{
+  return (WebServer.arg(id).length() != 0);
 }
 

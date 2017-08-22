@@ -110,6 +110,13 @@ void checkUDP()
               if (len >20) // extended packet size
               {
                 Nodes[unit].build = packetBuffer[13] + 256*packetBuffer[14];
+                #if FEATURE_NODELIST_NAMES
+                //if (Nodes[unit].nodeName==0)
+                //    Nodes[unit].nodeName =  (char *)malloc(FEATURE_NODELIST_NAMESSIZE+1);
+                memcpy(&Nodes[unit].nodeName,(byte*)packetBuffer+15,FEATURE_NODELIST_NAMESSIZE);
+                Nodes[unit].nodeName[FEATURE_NODELIST_NAMESSIZE]=0;
+                Nodes[unit].nodeType = packetBuffer[40];
+                #endif
               }
             }
 

@@ -59,6 +59,8 @@
 
 #define FEATURE_MQTT                    true
 #define FEATURE_MQTT_DOM                false // Not tested yet!
+#define FEATURE_NODELIST_NAMES          true
+#define FEATURE_NODELIST_NAMESSIZE      10
 
 // ********************************************************************************
 //   DO NOT CHANGE ANYTHING BELOW THIS LINE
@@ -74,13 +76,14 @@
 #define socketdebug                     false
 #define ARDUINO_PROJECT_PID       2016110201L
 #define VERSION                             2
-#define BUILD                             151
+#define BUILD                             152
 #define BUILD_NOTES                        ""
 
 #define NODE_TYPE_ID_ESP_EASY_STD           1
-#define NODE_TYPE_ID_ESP_EASY4M_STD        17
+#define NODE_TYPE_ID_ESP_EASYM_STD         17
 #define NODE_TYPE_ID_ESP_EASY32_STD        33
 #define NODE_TYPE_ID_ARDUINO_EASY_STD      65
+#define NODE_TYPE_ID_NANO_EASY_STD         81
 #define NODE_TYPE_ID                        NODE_TYPE_ID_ARDUINO_EASY_STD
 
 #define CPLUGIN_PROTOCOL_ADD                1
@@ -167,6 +170,9 @@
 #define VALUE_SOURCE_MQTT                   4
 #define VALUE_SOURCE_UDP                    5
 
+#define INT_MIN -32767
+#define INT_MAX 32767
+
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
@@ -177,13 +183,14 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #endif
+#include <DNS.h>
 
 void(*Reboot)(void)=0;
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
 // WebServer
-EthernetServer WebServer(80);
+EthernetServer MyWebServer(80);
 
 #if FEATURE_MQTT
 EthernetClient mqtt;
@@ -319,6 +326,10 @@ struct NodeStruct
   byte ip[4];
   byte age;
   uint16_t build;
+  #if FEATURE_NODELIST_NAMES
+    char nodeName[FEATURE_NODELIST_NAMESSIZE+1];
+  #endif
+  byte nodeType;
 } Nodes[UNIT_MAX];
 
 struct systemTimerStruct
@@ -387,13 +398,15 @@ unsigned long flashWrites = 0;
 
 String eventBuffer = "";
 
+int freeMem;
+
 /*********************************************************************************************\
  * SETUP
 \*********************************************************************************************/
 void setup()
 {
   Serial.begin(115200);
-  
+                     
   fileSystemCheck();
 
   emergencyReset();
@@ -437,11 +450,15 @@ void setup()
     // setup UDP
     if (Settings.UDPPort != 0)
       portUDP.begin(Settings.UDPPort);
+    else
+      portUDP.begin(123); // setup for NTP and other stuff if no user port is selected
       
     hardwareInit();
     PluginInit();
     CPluginInit();
 
+    MyWebServer.begin();
+    
 #if FEATURE_MQTT
     // Setup MQTT Client
     byte ProtocolIndex = getProtocolIndex(Settings.Protocol);
@@ -487,6 +504,10 @@ void setup()
 
     log = F("INIT : Boot OK");
     addLog(LOG_LEVEL_INFO, log);
+    #if socketdebug
+      ShowSocketStatus();
+    #endif
+
   }
   else
   {
@@ -549,6 +570,8 @@ void run10TimesPerSecond()
 \*********************************************************************************************/
 void runOncePerSecond()
 {
+  freeMem = FreeMem();
+
   timer1s = millis() + 1000;
 
   checkSensors();

@@ -1519,67 +1519,80 @@ void checkTime()
 
 unsigned long getNtpTime()
 {
-  portUDP.begin(123); // reuse existing socket
+  const char* ntpServerName = "pool.ntp.org";
+  unsigned long result=0;
+  
+  IPAddress timeServerIP;
 
-  for (byte x = 1; x < 4; x++)
-  {
-    String log = F("NTP  : NTP sync request:");
-    log += x;
-    addLog(LOG_LEVEL_DEBUG_MORE, log);
-
-    const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
-    byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
-
-    IPAddress timeServerIP;
-    const char* ntpServerName = "pool.ntp.org";
-
-    //if (Settings.NTPHost[0] != 0)
-    //  WiFi.hostByName(Settings.NTPHost, timeServerIP);
-    //else
-    //  WiFi.hostByName(ntpServerName, timeServerIP);
-
-    while (portUDP.parsePacket() > 0) ; // discard any previously received packets
-
-    memset(packetBuffer, 0, NTP_PACKET_SIZE);
-    packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-    packetBuffer[1] = 0;     // Stratum, or type of clock
-    packetBuffer[2] = 6;     // Polling Interval
-    packetBuffer[3] = 0xEC;  // Peer Clock Precision
-    packetBuffer[12]  = 49;
-    packetBuffer[13]  = 0x4E;
-    packetBuffer[14]  = 49;
-    packetBuffer[15]  = 52;
-    portUDP.beginPacket(ntpServerName, 123); //NTP requests are to port 123
-    portUDP.write(packetBuffer, NTP_PACKET_SIZE);
-    portUDP.endPacket();
-
-    uint32_t beginWait = millis();
-    while (millis() - beginWait < 2000) {
-      int size = portUDP.parsePacket();
-      if (size >= NTP_PACKET_SIZE) {
-        portUDP.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
-        unsigned long secsSince1900;
-        // convert four bytes starting at location 40 to a long integer
-        secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
-        secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
-        secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
-        secsSince1900 |= (unsigned long)packetBuffer[43];
-        log = F("NTP  : NTP replied: ");
-        log += millis() - beginWait;
-        log += F(" mSec");
-        addLog(LOG_LEVEL_DEBUG_MORE, log);
-        if (Settings.UDPPort != 0)
-          portUDP.begin(Settings.UDPPort);
-        return secsSince1900 - 2208988800UL + Settings.TimeZone * SECS_PER_MIN;
-      }
-    }
-    log = F("NTP  : No reply");
-    addLog(LOG_LEVEL_DEBUG_MORE, log);
-  }
-  return 0;
+  // The W5100 seems to have an issue with mixing TCP UDP on the same socket.
+  // So we stop the default listening UDP socket now, so DNS client will reuse this UDP socket
   if (Settings.UDPPort != 0)
-    portUDP.begin(Settings.UDPPort);
+    portUDP.stop();
+  int ret = 0;
+  DNSClient dns;
+  dns.begin(Ethernet.dnsServerIP());
+  #if socketdebug
+    ShowSocketStatus();
+  #endif
+  ret = dns.getHostByName(ntpServerName, timeServerIP);
+  if (Settings.UDPPort != 0)
+    portUDP.begin(Settings.UDPPort);  // re-use UDP socket for system packets if it was used before
+  else
+    portUDP.begin(123); // start listening only during this call on port 123
+  #if socketdebug
+    ShowSocketStatus();
+  #endif
 
+  if (ret){
+    for (byte x = 1; x < 4; x++)
+    {
+      String log = F("NTP  : NTP sync request:");
+      log += x;
+      addLog(LOG_LEVEL_DEBUG_MORE, log);
+
+      const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
+      byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
+
+      memset(packetBuffer, 0, NTP_PACKET_SIZE);
+      packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+      packetBuffer[1] = 0;     // Stratum, or type of clock
+      packetBuffer[2] = 6;     // Polling Interval
+      packetBuffer[3] = 0xEC;  // Peer Clock Precision
+      packetBuffer[12]  = 49;
+      packetBuffer[13]  = 0x4E;
+      packetBuffer[14]  = 49;
+      packetBuffer[15]  = 52;
+
+      portUDP.beginPacket(timeServerIP, 123); //NTP requests are to port 123
+      portUDP.write(packetBuffer, NTP_PACKET_SIZE);
+      portUDP.endPacket();
+
+      uint32_t beginWait = millis();
+      while (millis() - beginWait < 2000) {
+        int size = portUDP.parsePacket();
+        if (size == NTP_PACKET_SIZE && portUDP.remotePort() == 123) {
+          portUDP.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+          unsigned long secsSince1900;
+          // convert four bytes starting at location 40 to a long integer
+          secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
+          secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
+          secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
+          secsSince1900 |= (unsigned long)packetBuffer[43];
+          log = F("NTP  : NTP replied: ");
+          log += millis() - beginWait;
+          log += F(" mSec");
+          addLog(LOG_LEVEL_DEBUG_MORE, log);
+          result = secsSince1900 - 2208988800UL + Settings.TimeZone * SECS_PER_MIN;
+          break; // exit wait loop
+        }
+      }
+      if (result)
+        break; // exit for loop
+      log = F("NTP  : No reply");
+      addLog(LOG_LEVEL_DEBUG_MORE, log);
+    } // for
+  } // ret
+  return result;
 }
 
 
