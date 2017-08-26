@@ -371,6 +371,7 @@ void sendSysInfoUDP(byte repeats)
       Nodes[Settings.Unit].ip[x] = ip[x];
     Nodes[Settings.Unit].age = 0;
     Nodes[Settings.Unit].build = Settings.Build;
+    Nodes[Settings.Unit].nodeType = NODE_TYPE_ID;    
   }
 }
 

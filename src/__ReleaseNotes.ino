@@ -1,3 +1,7 @@
+// R153
+// Added nodetype to self.
+// Minor cosmetic GUI fixes
+
 // R152 21-08-2017
 // Fixed a bug with getting NTP time when nodelist is active and fixed a socket issue when combined with MQTT
 // Dummy WebServer class to mimic WebServer.arg calls from plugins

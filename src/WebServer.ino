@@ -279,7 +279,7 @@ void handle_root(EthernetClient client, String &post) {
 
     reply += printWebString;
     reply += F("<form>");
-    reply += F("<table><TH>System Info<TH>Value<TH><TH>System Info<TH>Value");
+    reply += F("<table><TH>System Info<TH>Value<TH><TH>System Info<TH>Value<TH>");
 
     reply += F("<TR><TD>Unit:<TD>");
     reply += Settings.Unit;
@@ -336,9 +336,9 @@ void handle_root(EthernetClient client, String &post) {
     reply = "";
 
     #if FEATURE_NODELIST_NAMES
-        reply += F("<TR><TH>Node List:<TH>Name<TH>Build<TH>Type<TH>IP<TH>Age<TH><TR><TD><TD><TD>");
+        reply += F("<TR><TH>Node List:<TH>Name<TH>Build<TH>Type<TH>IP<TH>Age");
     #else
-        reply += F("<TR><TH>Node List:<TH>Build<TH>Type<TH>IP<TH>Age<TH><TR><TD><TD><TD>");
+        reply += F("<TR><TH>Node List:<TH>Build<TH>Type<TH>IP<TH>Age<TH>");
     #endif
     for (byte x = 0; x < UNIT_MAX; x++)
     {
