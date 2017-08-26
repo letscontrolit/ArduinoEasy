@@ -7,6 +7,18 @@
 #define PLUGIN_NAME_004       "Temperature - DS18b20"
 #define PLUGIN_VALUENAME1_004 "Temperature"
 
+#define PIN_TO_BASEREG(pin)             (portInputRegister(digitalPinToPort(pin)))
+#define PIN_TO_BITMASK(pin)             (digitalPinToBitMask(pin))
+#define IO_REG_TYPE uint8_t
+#define IO_REG_ASM asm("r30")
+#define DIRECT_READ(base, mask)         (((*(base)) & (mask)) ? 1 : 0)
+#define DIRECT_MODE_INPUT(base, mask)   ((*((base)+1)) &= ~(mask))
+#define DIRECT_MODE_OUTPUT(base, mask)  ((*((base)+1)) |= (mask))
+#define DIRECT_WRITE_LOW(base, mask)    ((*((base)+2)) &= ~(mask))
+#define DIRECT_WRITE_HIGH(base, mask)   ((*((base)+2)) |= (mask))
+
+IO_REG_TYPE bitmask;
+volatile IO_REG_TYPE *baseReg;
 uint8_t Plugin_004_DallasPin;
 
 boolean Plugin_004(byte function, struct EventStruct *event, String& string)
@@ -50,6 +62,9 @@ boolean Plugin_004(byte function, struct EventStruct *event, String& string)
 
         // Scan the onewire bus and fill dropdown list with devicecount on this GPIO.
         Plugin_004_DallasPin = Settings.TaskDevicePin1[event->TaskIndex];
+
+        bitmask = PIN_TO_BITMASK(Plugin_004_DallasPin );
+        baseReg = PIN_TO_BASEREG(Plugin_004_DallasPin );
 
         byte choice = Settings.TaskDevicePluginConfig[event->TaskIndex][0];
         byte devCount = Plugin_004_DS_scan(choice, addr);
@@ -107,6 +122,8 @@ boolean Plugin_004(byte function, struct EventStruct *event, String& string)
 
     case PLUGIN_READ:
       {
+        bitmask = PIN_TO_BITMASK(Plugin_004_DallasPin );
+        baseReg = PIN_TO_BASEREG(Plugin_004_DallasPin );
         uint8_t addr[8];
         // Load ROM address from tasksettings
         LoadTaskSettings(event->TaskIndex);
@@ -220,22 +237,31 @@ boolean Plugin_004_DS_readTemp(uint8_t ROM[8], float *value)
   \*********************************************************************************************/
 uint8_t Plugin_004_DS_reset()
 {
+  IO_REG_TYPE mask = bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
   uint8_t r;
   uint8_t retries = 125;
-  //noInterrupts();
-  pinMode(Plugin_004_DallasPin, INPUT);
-  do  {  // wait until the wire is high... just in case
+
+  noInterrupts();
+  DIRECT_MODE_INPUT(reg, mask);
+  interrupts();
+  // wait until the wire is high... just in case
+  do {
     if (--retries == 0) return 0;
     delayMicroseconds(2);
-  } while ( !digitalRead(Plugin_004_DallasPin));
+  } while ( !DIRECT_READ(reg, mask));
 
-  pinMode(Plugin_004_DallasPin, OUTPUT); digitalWrite(Plugin_004_DallasPin, LOW);
-  delayMicroseconds(492); // Dallas spec. = Min. 480uSec. Arduino 500uSec.
-  pinMode(Plugin_004_DallasPin, INPUT); //Float
-  delayMicroseconds(40);
-  r = !digitalRead(Plugin_004_DallasPin);
-  delayMicroseconds(420);
-  //interrupts();
+  noInterrupts();
+  DIRECT_WRITE_LOW(reg, mask);
+  DIRECT_MODE_OUTPUT(reg, mask);  // drive output low
+  interrupts();
+  delayMicroseconds(480);
+  noInterrupts();
+  DIRECT_MODE_INPUT(reg, mask); // allow it to float
+  delayMicroseconds(70);
+  r = !DIRECT_READ(reg, mask);
+  interrupts();
+  delayMicroseconds(410);
   return r;
 }
 
@@ -415,16 +441,18 @@ void Plugin_004_DS_write(uint8_t ByteToWrite)
   \*********************************************************************************************/
 uint8_t Plugin_004_DS_read_bit(void)
 {
+  IO_REG_TYPE mask=bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
   uint8_t r;
 
-  //noInterrupts();
-  pinMode(Plugin_004_DallasPin, OUTPUT);
-  digitalWrite(Plugin_004_DallasPin, LOW);
+  noInterrupts();
+  DIRECT_MODE_OUTPUT(reg, mask);
+  DIRECT_WRITE_LOW(reg, mask);
   delayMicroseconds(3);
-  pinMode(Plugin_004_DallasPin, INPUT); // let pin float, pull up will raise
+  DIRECT_MODE_INPUT(reg, mask); // let pin float, pull up will raise
   delayMicroseconds(10);
-  r = digitalRead(Plugin_004_DallasPin);
-  //interrupts();
+  r = DIRECT_READ(reg, mask);
+  interrupts();
   delayMicroseconds(53);
   return r;
 }
@@ -435,21 +463,24 @@ uint8_t Plugin_004_DS_read_bit(void)
   \*********************************************************************************************/
 void Plugin_004_DS_write_bit(uint8_t v)
 {
+  IO_REG_TYPE mask=bitmask;
+  volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+
   if (v & 1) {
-    //noInterrupts();
-    digitalWrite(Plugin_004_DallasPin, LOW);
-    pinMode(Plugin_004_DallasPin, OUTPUT);
+    noInterrupts();
+    DIRECT_WRITE_LOW(reg, mask);
+    DIRECT_MODE_OUTPUT(reg, mask);  // drive output low
     delayMicroseconds(10);
-    digitalWrite(Plugin_004_DallasPin, HIGH);
-    //interrupts();
+    DIRECT_WRITE_HIGH(reg, mask); // drive output high
+    interrupts();
     delayMicroseconds(55);
   } else {
-    //noInterrupts();
-    digitalWrite(Plugin_004_DallasPin, LOW);
-    pinMode(Plugin_004_DallasPin, OUTPUT);
+    noInterrupts();
+    DIRECT_WRITE_LOW(reg, mask);
+    DIRECT_MODE_OUTPUT(reg, mask);  // drive output low
     delayMicroseconds(65);
-    digitalWrite(Plugin_004_DallasPin, HIGH);
-    //interrupts();
+    DIRECT_WRITE_HIGH(reg, mask); // drive output high
+    interrupts();
     delayMicroseconds(5);
   }
 }

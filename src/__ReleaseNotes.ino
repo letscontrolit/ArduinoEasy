@@ -1,4 +1,8 @@
-// R153
+// R154 26-08-2017
+// Removed pin select D4 from the list as it is used for SD Card
+// Fixed Dallas plugin for AVR
+
+// R153 25-08-2017
 // Added nodetype to self.
 // Minor cosmetic GUI fixes
 

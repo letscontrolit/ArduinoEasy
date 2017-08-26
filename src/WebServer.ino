@@ -656,7 +656,6 @@ void handle_hardware(EthernetClient client, String &post) {
   {
     Settings.PinBootStates[2]  =  WebServer.arg(F("p2")).toInt();
     Settings.PinBootStates[3]  =  WebServer.arg(F("p3")).toInt();
-    Settings.PinBootStates[4]  =  WebServer.arg(F("p4")).toInt();
     Settings.PinBootStates[5]  =  WebServer.arg(F("p5")).toInt();
     Settings.PinBootStates[6] =  WebServer.arg(F("p6")).toInt();
     Settings.PinBootStates[7] =  WebServer.arg(F("p7")).toInt();
@@ -677,14 +676,12 @@ void handle_hardware(EthernetClient client, String &post) {
   addPinStateSelect(reply, "p2", Settings.PinBootStates[2]);
   reply += F("<TR><TD>D3:<TD>");
   addPinStateSelect(reply, "p3", Settings.PinBootStates[3]);
-  reply += F("<TR><TD>D4:<TD>");
-  addPinStateSelect(reply, "p4", Settings.PinBootStates[4]);
   reply += F("<TR><TD>D5:<TD>");
+  addPinStateSelect(reply, "p5", Settings.PinBootStates[5]);
 
   client.print(reply);
   reply = "";
 
-  addPinStateSelect(reply, "p5", Settings.PinBootStates[5]);
   reply += F("<TR><TD>D6:<TD>");
   addPinStateSelect(reply, "p6", Settings.PinBootStates[6]);
   reply += F("<TR><TD>D7:<TD>");
@@ -1368,34 +1365,32 @@ void sortDeviceArray()
 //********************************************************************************
 void addPinSelect(boolean forI2C, String& str, String name,  int choice)
 {
-  String options[11];
+  String options[10];
   options[0] = F(" ");
   options[1] = F("D2");
   options[2] = F("D3");
-  options[3] = F("D4");
-  options[4] = F("D5");
-  options[5] = F("D6");
-  options[6] = F("D7");
-  options[7] = F("D8");
-  options[8] = F("D9");
-  options[9] = F("D11");
-  options[10] = F("D12");
-  int optionValues[11];
+  options[3] = F("D5");
+  options[4] = F("D6");
+  options[5] = F("D7");
+  options[6] = F("D8");
+  options[7] = F("D9");
+  options[8] = F("D11");
+  options[9] = F("D12");
+  int optionValues[10];
   optionValues[0] = -1;
   optionValues[1] = 2;
   optionValues[2] = 3;
-  optionValues[3] = 4;
-  optionValues[4] = 5;
-  optionValues[5] = 6;
-  optionValues[6] = 7;
-  optionValues[7] = 8;
-  optionValues[8] = 9;
-  optionValues[9] = 11;
-  optionValues[10] = 12;
+  optionValues[3] = 5;
+  optionValues[4] = 6;
+  optionValues[5] = 7;
+  optionValues[6] = 8;
+  optionValues[7] = 9;
+  optionValues[8] = 11;
+  optionValues[9] = 12;
   str += F("<select name='");
   str += name;
   str += "'>";
-  for (byte x = 0; x < 11; x++)
+  for (byte x = 0; x < 10; x++)
   {
     str += F("<option value='");
     str += optionValues[x];
